@@ -160,6 +160,22 @@ $('#detailsImg').onclick = () => viewPhoto(detailsItem);
 $('#detailsClose').onclick = () => $('#details').close();
 $('#detailsEdit').onclick = () => { $('#details').close(); openEditor(detailsItem); };
 
+// New item copied from an old one (photo too), dated today.
+$('#detailsAgain').onclick = async () => {
+  const old = detailsItem;
+  $('#details').close();
+  openEditor(null);
+  const f = $('#form');
+  f.title.value = old.name;
+  f.rate.value = old.rate ?? '';
+  f.quantity.value = old.quantity ?? '';
+  f.seller.value = old.seller ?? '';
+  if (old.thumb) {
+    setPreview(thumbUrl(old));
+    newPhoto = { full: await DB.getPhoto(old.id), thumb: old.thumb };
+  }
+};
+
 async function viewPhoto(item) {
   const blob = await DB.getPhoto(item.id);
   if (!blob) return;
@@ -233,6 +249,16 @@ for (const id of ['#bsYear', '#bsMonth', '#bsDay']) {
   };
 }
 
+// 📅 button: pick an AD date, the BS dropdowns follow.
+$('#adPicker').onclick = e => {
+  e.target.value = pickerAD();
+  try { e.target.showPicker(); } catch {}
+};
+$('#adPicker').onchange = e => {
+  if (!e.target.value) return;
+  try { setBSPicker(adToBS(e.target.value)); } catch { alert('That date is out of range'); }
+};
+
 function yesterday() {
   const [y, m, d] = today().split('-').map(Number);
   const t = new Date(Date.UTC(y, m - 1, d - 1));
@@ -260,6 +286,19 @@ function setPreview(url) {
   $('.photo-pick').classList.toggle('has', !!url);
 }
 
+// Unique values, most used first (case-insensitive, keeps the latest spelling).
+function mostUsed(values) {
+  const counts = new Map();
+  for (const v of values) {
+    const key = v?.trim().toLowerCase();
+    if (!key) continue;
+    const c = counts.get(key) ?? { text: v.trim(), n: 0 };
+    c.n++;
+    counts.set(key, c);
+  }
+  return [...counts.values()].sort((a, b) => b.n - a.n).map(c => c.text);
+}
+
 function openEditor(item) {
   editing = item;
   newPhoto = null;
@@ -276,8 +315,21 @@ function openEditor(item) {
   $('#deleteBtn').hidden = !item;
   const sellers = [...new Set(items.map(i => i.seller).filter(Boolean))].sort();
   $('#sellers').replaceChildren(...sellers.map(s => new Option(s)));
+  $('#names').replaceChildren(...mostUsed(items.map(i => i.name)).map(n => new Option(n)));
   $('#editor').showModal();
 }
+
+// Auto-fill: picking a known name on a new item fills empty fields from the last purchase.
+$('#form').title.onchange = () => {
+  if (editing) return;
+  const f = $('#form');
+  const name = f.title.value.trim().toLowerCase();
+  const last = items.find(i => i.name?.trim().toLowerCase() === name);
+  if (!last) return;
+  if (f.rate.value === '') f.rate.value = last.rate ?? '';
+  if (f.quantity.value === '' || f.quantity.value === '1') f.quantity.value = last.quantity ?? '';
+  if (f.seller.value === '') f.seller.value = last.seller ?? '';
+};
 
 async function usePhoto(file) {
   setPreview('');

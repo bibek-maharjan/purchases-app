@@ -86,6 +86,8 @@ dialog::backdrop { background: #000a; }
 .primary { background: #7c5cff; border: none; }
 .row[hidden] { display: none; }
 .date-quick .active { background: #7c5cff; border-color: #7c5cff; }
+.row > .cal-btn { flex: 0 0 48px; padding: 12px 0; position: relative; }
+.cal-btn input { position: absolute; inset: 0; opacity: 0; width: 100%; padding: 0; }
 .danger { background: #5a1f24; border: none; }
 .btn { text-align: center; }
 

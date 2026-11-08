@@ -40,6 +40,8 @@ Plan agreed with the user — build **two separate phone apps**, one at a time:
   buttons; Custom reveals BS Year/Month/Day dropdowns. The hint line shows
   `22 Kartik 2083 · AD 2026-11-08`. List shows BS with AD in brackets.
   Each item stores both `date` (AD, used for sorting) and `dateBS`.
+  A 📅 button at the end of the BS row (`#adPicker`, native date input) picks
+  an AD date and converts it into the BS dropdowns.
 - **Views** (▦ button): List or Gallery. Gallery has one +/− control for 1–5
   columns (this also sets card size). Each view has its own show/hide checkboxes
   for photo, name, rate, quantity, seller, BS date, and AD date. Saved in
@@ -52,6 +54,13 @@ Plan agreed with the user — build **two separate phone apps**, one at a time:
   Camera (`#cameraInput`, capture), Upload (`#uploadInput`), Paste (clipboard
   API, hidden if unsupported). Pasting with Ctrl+V / long-press also works while
   the form is open. All go through `usePhoto(file)`.
+- **Item name suggestions**: `#names` datalist, most-used names first
+  (case-insensitive, `mostUsed()`). Seller uses a datalist too (alphabetical).
+- **Auto-fill**: on a new item, picking a known name fills empty rate, seller,
+  and quantity (quantity also when it's still the default `1`) from the latest
+  purchase with that name. Never overwrites typed values; off when editing.
+- **Buy again** (button in the read-only view): opens a new item with name,
+  rate, quantity, seller, and photo copied, date = today.
 
 ### Files
 
@@ -69,7 +78,7 @@ No build step, plain HTML/CSS/JS.
   Rebuilt from there with:
   `echo 'import N from "nepali-datetime"; window.NepaliDate = N;' | ./node_modules/.bin/esbuild --bundle --minify --format=iife --outfile=<this>/nepali.js`
 - `sw.js`: cache-first service worker. **Bump `VERSION` on every change**
-  (now `v8`), or phones keep the old version. The user must close and reopen
+  (now `v11`), or phones keep the old version. The user must close and reopen
   the app twice to get updates.
 - `manifest.json`, `icon-192.png`, `icon-512.png`.
 - `purchases-flow.mmd`: Mermaid diagram of the app flow. View it with
@@ -78,6 +87,11 @@ No build step, plain HTML/CSS/JS.
 Item shape: `{ id, created, name, rate, quantity, seller, date, dateBS, thumb }`.
 
 ### Deploy
+
+**Only when the user asks.** Never commit, push, or deploy on your own, even
+after finishing and testing a change. Also don't start building new
+features or apps unless the user asks. Finish the change, test it locally,
+then tell the user it's ready and wait.
 
 ```
 git commit -am "..." && git push

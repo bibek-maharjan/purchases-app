@@ -52,7 +52,8 @@
         <label class="btn">Upload<input id="uploadInput" type="file" accept="image/*" hidden></label>
         <button type="button" id="pasteBtn">Paste</button>
       </div>
-      <input name="title" placeholder="Item name" required>
+      <input name="title" placeholder="Item name" list="names" autocomplete="off" required>
+      <datalist id="names"></datalist>
       <div class="row">
         <input name="rate" type="number" inputmode="decimal" step="any" placeholder="Rate">
         <input name="quantity" placeholder="Quantity (e.g. 20 kg)">
@@ -68,6 +69,7 @@
         <select id="bsYear" aria-label="Year"></select>
         <select id="bsMonth" aria-label="Month"></select>
         <select id="bsDay" aria-label="Day"></select>
+        <label class="btn cal-btn" aria-label="Pick AD date">📅<input id="adPicker" type="date"></label>
       </div>
       <div id="adDate" class="hint"></div>
       <div class="row">
@@ -83,6 +85,7 @@
     <div id="detailsInfo"></div>
     <div class="row">
       <button type="button" id="detailsEdit">Edit</button>
+      <button type="button" id="detailsAgain">Buy again</button>
       <button type="button" id="detailsClose" class="primary">Close</button>
     </div>
   </dialog>

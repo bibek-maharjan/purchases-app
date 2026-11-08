@@ -7,8 +7,10 @@ flowchart TD
     D --> P["Tap photo: full photo only"]
     D --> R["Tap card text: read-only details (Edit button inside)"]
     R --> E
+    R --> BA["Buy again: copy item + photo, date today"]
+    BA --> G
     D --> E["Tap + (new) or ✎ on an item (edit)"]
-    E --> G["Form: name, rate, qty 1, seller"]
+    E --> G["Form: name (suggestions + auto-fill), rate, qty 1, seller"]
     G --> F["Photo: Camera / Upload / Paste → full 1280px + thumb 240px"]
     F --> G
     G --> H["Date: Today / Yesterday / Custom BS"]
