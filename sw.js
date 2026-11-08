@@ -1,5 +1,5 @@
 // Caches the app files so it opens offline. Bump VERSION after changing any file.
-const VERSION = 'v2';
+const VERSION = 'v4';
 const FILES = ['./', 'index.html', 'style.css', 'app.js', 'db.js', 'zip.js', 'nepali.js',
   'manifest.json', 'icon-192.png', 'icon-512.png'];
 
