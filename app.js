@@ -151,6 +151,7 @@ for (const id of ['#bsYear', '#bsMonth', '#bsDay']) {
 // ---------- Editor ----------
 
 function setPreview(url) {
+  if ($('#preview').src.startsWith('blob:')) URL.revokeObjectURL($('#preview').src);
   $('#preview').src = url || '';
   $('.photo-pick').classList.toggle('has', !!url);
 }
@@ -165,7 +166,8 @@ function openEditor(item) {
   f.quantity.value = item?.quantity ?? '';
   f.seller.value = item?.seller ?? '';
   setBSPicker(item?.dateBS ?? adToBS(today()));
-  setPreview(item ? thumbUrl(item) : '');
+  setPreview('');
+  if (item) DB.getPhoto(item.id).then(b => b && editing === item && setPreview(URL.createObjectURL(b)));
   $('#deleteBtn').hidden = !item;
   const sellers = [...new Set(items.map(i => i.seller).filter(Boolean))].sort();
   $('#sellers').replaceChildren(...sellers.map(s => new Option(s)));
@@ -177,9 +179,9 @@ $('#photoInput').onchange = async e => {
   const file = e.target.files[0];
   if (!file) return;
   $('#photoHint').textContent = 'Compressing…';
-  const [full, thumb] = await Promise.all([resize(file, 1280, 0.75), resize(file, 240, 0.7)]);
+  const [full, thumb] = await Promise.all([resize(file, 1600, 0.85), resize(file, 300, 0.75)]);
   newPhoto = { full, thumb };
-  setPreview(URL.createObjectURL(thumb));
+  setPreview(URL.createObjectURL(full));
   $('#photoHint').textContent = 'Tap to take photo';
   e.target.value = '';
 };
@@ -248,7 +250,7 @@ $('#importFile').onchange = async e => {
       item.thumb = null;
       if (photo) {
         full = new Blob([photo], { type: 'image/jpeg' });
-        item.thumb = await resize(full, 240, 0.7);
+        item.thumb = await resize(full, 300, 0.75);
       }
       await DB.save(item, full);
     }
