@@ -12,7 +12,12 @@ input, button, .btn {
   font: inherit; color: inherit; background: #26262c;
   border: 1px solid #333; border-radius: 10px; padding: 12px;
 }
-input { width: 100%; }
+input, select { width: 100%; }
+select {
+  font: inherit; color: inherit; background: #26262c;
+  border: 1px solid #333; border-radius: 10px; padding: 12px 6px;
+}
+.hint { color: #888; font-size: 13px; margin-top: -4px; }
 #search { flex: 1; }
 #menuBtn { width: 48px; }
 #count { padding: 0 12px 6px; color: #888; font-size: 13px; }

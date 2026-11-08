@@ -39,7 +39,12 @@
       </div>
       <input name="seller" placeholder="Seller" list="sellers">
       <datalist id="sellers"></datalist>
-      <input name="date" type="date">
+      <div class="row bs-date">
+        <select id="bsYear" aria-label="Year"></select>
+        <select id="bsMonth" aria-label="Month"></select>
+        <select id="bsDay" aria-label="Day"></select>
+      </div>
+      <div id="adDate" class="hint"></div>
       <div class="row">
         <button type="button" id="deleteBtn" class="danger">Delete</button>
         <button type="button" id="cancelBtn">Cancel</button>
@@ -50,6 +55,7 @@
 
   <dialog id="viewer"><img id="viewerImg" alt=""></dialog>
 
+  <script src="nepali.js"></script>
   <script src="zip.js"></script>
   <script src="db.js"></script>
   <script src="app.js"></script>

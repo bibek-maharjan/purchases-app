@@ -29,7 +29,7 @@ function thumbUrl(item) {
 // ---------- Search ----------
 // Every word typed must appear (as part of a word) in some field.
 function matches(item, words) {
-  const text = [item.name, item.seller, item.quantity, item.rate, item.date]
+  const text = [item.name, item.seller, item.quantity, item.rate, item.date, formatBS(item.dateBS)]
     .join(' ').toLowerCase();
   return words.every(w => text.includes(w));
 }
@@ -61,7 +61,7 @@ function renderMore() {
           ${item.rate !== '' && item.rate != null ? `<span class="rate">Rs ${esc(item.rate)}</span> · ` : ''}
           ${esc(item.quantity)}${item.quantity ? ' · ' : ''}${esc(item.seller)}
         </div>
-        <div class="meta">${esc(item.date)}</div>
+        <div class="meta">${esc(formatBS(item.dateBS))} <small>(${esc(item.date)})</small></div>
       </div>`;
     el.querySelector('img').onclick = e => { e.stopPropagation(); viewPhoto(item); };
     el.onclick = () => openEditor(item);
@@ -86,11 +86,69 @@ $('#viewer').onclick = () => {
   URL.revokeObjectURL($('#viewerImg').src);
 };
 
-// ---------- Editor ----------
+// ---------- Dates (BS) ----------
+const BS_MONTHS = [
+  'Baisakh', 'Jestha', 'Asar', 'Shrawan', 'Bhadra', 'Asoj',
+  'Kartik', 'Mangsir', 'Poush', 'Magh', 'Falgun', 'Chaitra',
+];
+
 function today() {
-  const d = new Date();
-  return new Date(d - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  return new NepaliDate().formatEnglishDate('YYYY-MM-DD');
 }
+
+// 'YYYY-MM-DD' AD -> 'YYYY-MM-DD' BS
+function adToBS(ad) {
+  const [y, m, d] = ad.split('-').map(Number);
+  return NepaliDate.fromEnglishDate(y, m - 1, d).format('YYYY-MM-DD');
+}
+
+// 'YYYY-MM-DD' BS -> '22 Kartik 2083'
+function formatBS(bs) {
+  if (!bs) return '';
+  const [y, m, d] = bs.split('-').map(Number);
+  return `${d} ${BS_MONTHS[m - 1]} ${y}`;
+}
+
+function fillOptions(select, values, labels = values) {
+  select.replaceChildren(...values.map((v, i) => new Option(labels[i], v)));
+}
+
+// Sets the three BS dropdowns to a BS 'YYYY-MM-DD' and refreshes the AD hint.
+function setBSPicker(bs) {
+  const [y, m, d] = bs.split('-').map(Number);
+  const thisYear = new NepaliDate().getYear();
+  const years = [];
+  for (let i = Math.min(y, thisYear - 10); i <= thisYear + 1; i++) years.push(i);
+  fillOptions($('#bsYear'), years);
+  fillOptions($('#bsMonth'), BS_MONTHS.map((_, i) => i + 1), BS_MONTHS);
+  const days = NepaliDate.getDaysOfMonth(y, m - 1);
+  fillOptions($('#bsDay'), Array.from({ length: days }, (_, i) => i + 1));
+  $('#bsYear').value = y;
+  $('#bsMonth').value = m;
+  $('#bsDay').value = Math.min(d, days);
+  $('#adDate').textContent = 'AD: ' + pickerAD();
+}
+
+function pickerBS() {
+  const pad = n => String(n).padStart(2, '0');
+  return `${$('#bsYear').value}-${pad($('#bsMonth').value)}-${pad($('#bsDay').value)}`;
+}
+
+function pickerAD() {
+  return new NepaliDate(+$('#bsYear').value, $('#bsMonth').value - 1, +$('#bsDay').value)
+    .formatEnglishDate('YYYY-MM-DD');
+}
+
+for (const id of ['#bsYear', '#bsMonth', '#bsDay']) {
+  $(id).onchange = () => {
+    // Keep the day valid when switching to a shorter month.
+    const [y, m, d] = pickerBS().split('-').map(Number);
+    const max = NepaliDate.getDaysOfMonth(y, m - 1);
+    setBSPicker(`${y}-${m}-${Math.min(d, max)}`);
+  };
+}
+
+// ---------- Editor ----------
 
 function setPreview(url) {
   $('#preview').src = url || '';
@@ -106,7 +164,7 @@ function openEditor(item) {
   f.rate.value = item?.rate ?? '';
   f.quantity.value = item?.quantity ?? '';
   f.seller.value = item?.seller ?? '';
-  f.date.value = item?.date ?? today();
+  setBSPicker(item?.dateBS ?? adToBS(today()));
   setPreview(item ? thumbUrl(item) : '');
   $('#deleteBtn').hidden = !item;
   const sellers = [...new Set(items.map(i => i.seller).filter(Boolean))].sort();
@@ -136,7 +194,8 @@ $('#form').onsubmit = async e => {
     rate: f.rate.value === '' ? '' : Number(f.rate.value),
     quantity: f.quantity.value.trim(),
     seller: f.seller.value.trim(),
-    date: f.date.value,
+    date: pickerAD(),
+    dateBS: pickerBS(),
     thumb: newPhoto?.thumb ?? editing?.thumb ?? null,
   };
   await DB.save(item, newPhoto?.full);
@@ -205,6 +264,7 @@ $('#importFile').onchange = async e => {
 // ---------- Start ----------
 async function load() {
   items = await DB.allItems();
+  for (const i of items) if (!i.dateBS && i.date) i.dateBS = adToBS(i.date);
   items.sort((a, b) => (b.date || '').localeCompare(a.date || '') || b.created - a.created);
   search();
 }
