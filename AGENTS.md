@@ -76,8 +76,14 @@ Plan agreed with the user — build **two separate phone apps**, one at a time:
   Tapping a photo, and the read-only view, show all photos stacked vertically.
 - **Rotate** (v18): ↻ (bottom right of each photo in `#photoStrip`) turns it
   90° clockwise. Taps only count up `p.turns` and preview with CSS; on Save,
-  `rotate()` redraws the full photo once (q0.75) and a new thumbnail is made,
-  so many taps cost only one re-save. Crop is planned next (agreed: after rotate).
+  `editPhoto()` redraws the full photo once (q0.75) and a new thumbnail is made,
+  so many taps cost only one re-save.
+- **Crop** (v19): ✂ (bottom left of each photo in `#photoStrip`) opens the
+  `#cropper` dialog: photo on `#cropCanvas` (already turned by any pending ↻),
+  `#cropBox` with 4 corner handles (drag to resize) and drag inside to move.
+  Box is kept as fractions 0–1 (`cropBox`). Done runs `editPhoto(full, turns,
+  box)` — rotation + crop in one JPEG save — and resets `turns`; the new photo
+  is stored on the item's Save, like any other photo change.
 - **Item name suggestions**: `#names` datalist, most-used names first
   (case-insensitive, `mostUsed()`). Seller uses a datalist too (alphabetical).
 - **Auto-fill**: on a new item, picking a known name fills empty rate, seller,
@@ -152,6 +158,8 @@ user asks.
   returned the IndexedDB request object instead of `[]`, so Export hung at
   "Exporting…" and the details view of photo-less items didn't open.
 - v18: ↻ rotate button on each photo in the editor.
+- v19: ✂ crop screen for each photo in the editor. `rotate()` became
+  `turnedCanvas()` + `editPhoto()` (rotate and crop in one save).
 
 ### Files
 
@@ -175,7 +183,7 @@ No build step, plain HTML/CSS/JS.
   Rebuilt from there with:
   `echo 'import N from "nepali-datetime"; window.NepaliDate = N;' | ./node_modules/.bin/esbuild --bundle --minify --format=iife --outfile=<this>/nepali.js`
 - `sw.js`: cache-first service worker. **Bump `VERSION` on every change**
-  (now `v18`), or phones keep the old version. The user must close and reopen
+  (now `v19`), or phones keep the old version. The user must close and reopen
   the app twice to get updates.
 - `style.css`: all styling. The search bar is `#searchBar`, fixed to the bottom.
 - `manifest.json`, `icon-192.png`, `icon-512.png`.
