@@ -40,6 +40,14 @@ Plan agreed with the user — build **two separate phone apps**, one at a time:
   buttons; Custom reveals BS Year/Month/Day dropdowns. The hint line shows
   `22 Kartik 2083 · AD 2026-11-08`. List shows BS with AD in brackets.
   Each item stores both `date` (AD, used for sorting) and `dateBS`.
+- **Views** (▦ button): List or Gallery. Gallery has one +/− control for 1–5
+  columns (this also sets card size). Each view has its own show/hide checkboxes
+  for photo, name, rate, quantity, seller, BS date, and AD date. Saved in
+  `localStorage` under the key `view`. Gallery at 1–2 columns loads the full photo
+  so it stays sharp; at 3 or more columns it uses the thumbnail.
+- **Taps on an item** (list and gallery): photo → full photo only; ✎ icon
+  (top right) → editor; anywhere else on the card → read-only details dialog
+  (full photo + all fields, with Edit and Close buttons).
 
 ### Files
 
@@ -57,7 +65,7 @@ No build step, plain HTML/CSS/JS.
   Rebuilt from there with:
   `echo 'import N from "nepali-datetime"; window.NepaliDate = N;' | ./node_modules/.bin/esbuild --bundle --minify --format=iife --outfile=<this>/nepali.js`
 - `sw.js`: cache-first service worker. **Bump `VERSION` on every change**
-  (now `v5`), or phones keep the old version. The user must close and reopen
+  (now `v7`), or phones keep the old version. The user must close and reopen
   the app twice to get updates.
 - `manifest.json`, `icon-192.png`, `icon-512.png`.
 - `purchases-flow.mmd`: Mermaid diagram of the app flow. View it with

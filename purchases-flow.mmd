@@ -1,8 +1,13 @@
 flowchart TD
     A["Open app (works offline)"] --> B["Load items from phone storage"]
     B --> C["List: 30 at a time, newest first"]
+    C --> V["▦ View: List or Gallery (1–5 columns), pick fields to show"]
+    V --> C
     C --> D["Optional search: every word must match"]
-    D --> E["Tap + (new) or tap an item (edit)"]
+    D --> P["Tap photo: full photo only"]
+    D --> R["Tap card text: read-only details (Edit button inside)"]
+    R --> E
+    D --> E["Tap + (new) or ✎ on an item (edit)"]
     E --> F["Camera: full 1280px + thumb 240px"]
     F --> G["Form: name, rate, qty 1, seller"]
     G --> H["Date: Today / Yesterday / Custom BS"]

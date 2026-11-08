@@ -12,6 +12,7 @@
 <body>
   <header>
     <input id="search" type="search" placeholder="Search… e.g. drill india" autocomplete="off">
+    <button id="viewBtn" aria-label="View">▦</button>
     <button id="menuBtn" aria-label="Menu">⋮</button>
   </header>
   <div id="count"></div>
@@ -23,6 +24,21 @@
     <button id="exportBtn">Export backup (.zip)</button>
     <label class="btn">Import backup<input id="importFile" type="file" accept=".zip" hidden></label>
     <button id="closeMenu">Close</button>
+  </dialog>
+
+  <dialog id="viewMenu">
+    <div class="row seg">
+      <button type="button" data-mode="list">List</button>
+      <button type="button" data-mode="gallery">Gallery</button>
+    </div>
+    <div class="row cols" id="colsRow">
+      <button type="button" id="colsMinus">−</button>
+      <span id="colsLabel"></span>
+      <button type="button" id="colsPlus">+</button>
+    </div>
+    <div class="hint">Show in this view</div>
+    <div id="propList"></div>
+    <button id="closeView">Close</button>
   </dialog>
 
   <dialog id="editor">
@@ -56,6 +72,15 @@
         <button type="submit" class="primary">Save</button>
       </div>
     </form>
+  </dialog>
+
+  <dialog id="details">
+    <img id="detailsImg" alt="">
+    <div id="detailsInfo"></div>
+    <div class="row">
+      <button type="button" id="detailsEdit">Edit</button>
+      <button type="button" id="detailsClose" class="primary">Close</button>
+    </div>
   </dialog>
 
   <dialog id="viewer"><img id="viewerImg" alt=""></dialog>

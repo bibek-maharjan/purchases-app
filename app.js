@@ -48,23 +48,93 @@ function esc(s) {
   return String(s ?? '').replace(/[&<>"]/g, c => `&#${c.charCodeAt(0)};`);
 }
 
+// ---------- View settings (list / gallery) ----------
+const PROPS = [
+  ['photo', 'Photo'], ['name', 'Item name'], ['rate', 'Rate'], ['quantity', 'Quantity'],
+  ['seller', 'Seller'], ['dateBS', 'Date (BS)'], ['date', 'Date (AD)'],
+];
+const allOn = () => Object.fromEntries(PROPS.map(([k]) => [k, true]));
+let view = { mode: 'list', cols: 2, list: allOn(), gallery: allOn() };
+try { Object.assign(view, JSON.parse(localStorage.getItem('view'))); } catch {}
+
+function saveView() {
+  localStorage.setItem('view', JSON.stringify(view));
+  applyView();
+  search();
+}
+
+function applyView() {
+  const gallery = view.mode === 'gallery';
+  $('#list').className = gallery ? 'gallery' : '';
+  $('#list').style.setProperty('--cols', view.cols);
+  for (const b of document.querySelectorAll('.seg button')) {
+    b.classList.toggle('active', b.dataset.mode === view.mode);
+  }
+  $('#colsRow').hidden = !gallery;
+  $('#colsLabel').textContent = `${view.cols} column${view.cols > 1 ? 's' : ''}`;
+  const on = view[view.mode];
+  $('#propList').replaceChildren(...PROPS.map(([key, label]) => {
+    const l = document.createElement('label');
+    l.innerHTML = `<input type="checkbox" ${on[key] !== false ? 'checked' : ''}> ${label}`;
+    l.querySelector('input').onchange = e => { on[key] = e.target.checked; saveView(); };
+    return l;
+  }));
+}
+
+for (const b of document.querySelectorAll('.seg button')) {
+  b.onclick = () => { view.mode = b.dataset.mode; saveView(); };
+}
+$('#colsMinus').onclick = () => { view.cols = Math.max(1, view.cols - 1); saveView(); };
+$('#colsPlus').onclick = () => { view.cols = Math.min(5, view.cols + 1); saveView(); };
+$('#viewBtn').onclick = () => $('#viewMenu').showModal();
+$('#closeView').onclick = () => $('#viewMenu').close();
+
+// Big gallery cards use the full photo so they stay sharp.
+const fullUrls = new Map();
+async function setFullPhoto(img, item) {
+  if (!fullUrls.has(item.id)) {
+    const blob = await DB.getPhoto(item.id);
+    if (!blob) return;
+    fullUrls.set(item.id, URL.createObjectURL(blob));
+  }
+  img.src = fullUrls.get(item.id);
+}
+
+function itemHtml(item, on) {
+  const show = k => on[k] !== false;
+  const hasRate = show('rate') && item.rate !== '' && item.rate != null;
+  const parts = [
+    hasRate && `<span class="rate">Rs ${esc(item.rate)}</span>`,
+    show('quantity') && item.quantity && esc(item.quantity),
+    show('seller') && item.seller && esc(item.seller),
+  ].filter(Boolean);
+  const dates = [
+    show('dateBS') && esc(formatBS(item.dateBS)),
+    show('date') && item.date && (show('dateBS') ? `<small>(${esc(item.date)})</small>` : esc(item.date)),
+  ].filter(Boolean);
+  return (show('name') ? `<div class="name">${esc(item.name)}</div>` : '')
+    + (parts.length ? `<div class="meta">${parts.join(' · ')}</div>` : '')
+    + (dates.length ? `<div class="meta">${dates.join(' ')}</div>` : '');
+}
+
 function renderMore() {
+  const gallery = view.mode === 'gallery';
+  const on = view[view.mode];
   const frag = document.createDocumentFragment();
   for (const item of results.slice(shown, shown + PAGE)) {
     const el = document.createElement('div');
-    el.className = 'item';
+    el.className = gallery ? 'card' : 'item';
     el.innerHTML = `
-      <img src="${thumbUrl(item)}" alt="" loading="lazy">
-      <div class="info">
-        <div class="name">${esc(item.name)}</div>
-        <div class="meta">
-          ${item.rate !== '' && item.rate != null ? `<span class="rate">Rs ${esc(item.rate)}</span> · ` : ''}
-          ${esc(item.quantity)}${item.quantity ? ' · ' : ''}${esc(item.seller)}
-        </div>
-        <div class="meta">${esc(formatBS(item.dateBS))} <small>(${esc(item.date)})</small></div>
-      </div>`;
-    el.querySelector('img').onclick = e => { e.stopPropagation(); viewPhoto(item); };
-    el.onclick = () => openEditor(item);
+      ${on.photo !== false ? `<img src="${thumbUrl(item)}" alt="" loading="lazy">` : ''}
+      <div class="info">${itemHtml(item, on)}</div>
+      <button class="edit-btn" aria-label="Edit">✎</button>`;
+    const img = el.querySelector('img');
+    if (img) {
+      img.onclick = e => { e.stopPropagation(); viewPhoto(item); };
+      if (gallery && view.cols <= 2 && item.thumb) setFullPhoto(img, item);
+    }
+    el.querySelector('.edit-btn').onclick = e => { e.stopPropagation(); openEditor(item); };
+    el.onclick = () => showDetails(item);
     frag.append(el);
   }
   shown += PAGE;
@@ -74,6 +144,21 @@ function renderMore() {
 new IntersectionObserver(entries => {
   if (entries[0].isIntersecting && shown < results.length) renderMore();
 }, { rootMargin: '600px' }).observe($('#sentinel'));
+
+// Read-only card: full photo and every field.
+let detailsItem = null;
+async function showDetails(item) {
+  detailsItem = item;
+  const img = $('#detailsImg');
+  img.hidden = !item.thumb;
+  img.src = thumbUrl(item);
+  if (item.thumb) setFullPhoto(img, item);
+  $('#detailsInfo').innerHTML = itemHtml(item, allOn());
+  $('#details').showModal();
+}
+$('#detailsImg').onclick = () => viewPhoto(detailsItem);
+$('#detailsClose').onclick = () => $('#details').close();
+$('#detailsEdit').onclick = () => { $('#details').close(); openEditor(detailsItem); };
 
 async function viewPhoto(item) {
   const blob = await DB.getPhoto(item.id);
@@ -222,6 +307,7 @@ $('#form').onsubmit = async e => {
   };
   await DB.save(item, newPhoto?.full);
   thumbUrls.delete(item.id);
+  fullUrls.delete(item.id);
   $('#editor').close();
   await load();
 };
@@ -293,6 +379,7 @@ async function load() {
 
 $('#search').oninput = search;
 $('#addBtn').onclick = () => openEditor(null);
+applyView();
 load();
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
