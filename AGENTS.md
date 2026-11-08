@@ -28,7 +28,8 @@ Plan agreed with the user — build **two separate phone apps**, one at a time:
 
 ### Status at handoff (Nov 2026)
 
-- Live version is **v18**: ↻ rotate on editor photos. v17 fixed Export (and
+- Live version is **v19**: ✂ crop on editor photos. v18 added ↻ rotate (both
+  also in the Clothes app, v2). v17 fixed Export (and
   the details view) for items with no photo. v16 (`da78a05`) was the bottom search bar, v15 (`6b0ca6d`) the fast
   batched import.
 - Everything in this repo is committed; a new session should start clean.
