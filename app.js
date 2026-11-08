@@ -21,6 +21,21 @@ async function resize(file, maxSide, quality) {
   return new Promise(r => canvas.toBlob(r, 'image/jpeg', quality));
 }
 
+// Turns a photo clockwise by `turns` quarter turns (1 = 90°).
+async function rotate(blob, turns) {
+  const bmp = await createImageBitmap(blob);
+  const side = turns % 2 === 1;
+  const canvas = document.createElement('canvas');
+  canvas.width = side ? bmp.height : bmp.width;
+  canvas.height = side ? bmp.width : bmp.height;
+  const ctx = canvas.getContext('2d');
+  ctx.translate(canvas.width / 2, canvas.height / 2);
+  ctx.rotate(turns * Math.PI / 2);
+  ctx.drawImage(bmp, -bmp.width / 2, -bmp.height / 2);
+  bmp.close();
+  return new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.75));
+}
+
 // Like Promise.all, but only `limit` items are in flight at once (keeps memory sane).
 async function mapLimit(list, limit, fn) {
   const out = new Array(list.length);
@@ -309,15 +324,22 @@ for (const b of document.querySelectorAll('.date-quick button')) {
 
 // ---------- Editor ----------
 
-// Editor photo row: ★ makes a photo the cover (first), × removes it.
+// Editor photo row: ★ makes a photo the cover (first), × removes it,
+// ↻ turns it 90° (only previewed here; the photo is redrawn once on Save).
 function renderStrip() {
   $('#photoHint').hidden = editPhotos.length > 0;
   $('#photoStrip').replaceChildren(...editPhotos.map((p, i) => {
     const el = document.createElement('div');
     el.className = 'thumb';
-    el.innerHTML = `<img src="${p.url}" alt="">
+    el.innerHTML = `<img src="${p.url}" alt="" style="transform: rotate(${(p.turns ?? 0) * 90}deg)">
       <button type="button" class="cover" aria-label="Make cover">★</button>
-      <button type="button" class="del" aria-label="Remove">×</button>`;
+      <button type="button" class="del" aria-label="Remove">×</button>
+      <button type="button" class="turn" aria-label="Rotate">↻</button>`;
+    el.querySelector('.turn').onclick = () => {
+      p.turns = ((p.turns ?? 0) + 1) % 4;
+      photosChanged = true;
+      renderStrip();
+    };
     el.querySelector('.cover').onclick = () => {
       editPhotos.unshift(...editPhotos.splice(i, 1));
       photosChanged = true;
@@ -456,6 +478,12 @@ $('#form').onsubmit = async e => {
     photoCount: editing?.photoCount ?? (editing?.thumb ? 1 : 0),
   };
   if (photosChanged) {
+    for (const p of editPhotos) {
+      if (!p.turns) continue;
+      p.full = await rotate(p.full, p.turns);
+      p.thumb = null;
+      p.turns = 0;
+    }
     const cover = editPhotos[0];
     item.thumb = cover ? cover.thumb ?? await resize(cover.full, 240, 0.7) : null;
     item.photoCount = editPhotos.length;

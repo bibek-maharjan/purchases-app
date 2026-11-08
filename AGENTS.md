@@ -28,8 +28,8 @@ Plan agreed with the user — build **two separate phone apps**, one at a time:
 
 ### Status at handoff (Nov 2026)
 
-- Live version is **v17**: fixes Export (and the details view) for items with
-  no photo. v16 (`da78a05`) was the bottom search bar, v15 (`6b0ca6d`) the fast
+- Live version is **v18**: ↻ rotate on editor photos. v17 fixed Export (and
+  the details view) for items with no photo. v16 (`da78a05`) was the bottom search bar, v15 (`6b0ca6d`) the fast
   batched import.
 - Everything in this repo is committed; a new session should start clean.
 - The user's phone had 1,295 items (1,031 thumbnails, 126 with 2+ photos) after
@@ -74,6 +74,10 @@ Plan agreed with the user — build **two separate phone apps**, one at a time:
   makes a photo the cover (first), × removes it. The cover's thumbnail is
   `item.thumb`; `item.photoCount` drives the `📷 N` badge on list/gallery items.
   Tapping a photo, and the read-only view, show all photos stacked vertically.
+- **Rotate** (v18): ↻ (bottom right of each photo in `#photoStrip`) turns it
+  90° clockwise. Taps only count up `p.turns` and preview with CSS; on Save,
+  `rotate()` redraws the full photo once (q0.75) and a new thumbnail is made,
+  so many taps cost only one re-save. Crop is planned next (agreed: after rotate).
 - **Item name suggestions**: `#names` datalist, most-used names first
   (case-insensitive, `mostUsed()`). Seller uses a datalist too (alphabetical).
 - **Auto-fill**: on a new item, picking a known name fills empty rate, seller,
@@ -147,6 +151,7 @@ user asks.
 - v17: bug fix in `db.js` `run()`: for an item with no photo, `getPhotos()`
   returned the IndexedDB request object instead of `[]`, so Export hung at
   "Exporting…" and the details view of photo-less items didn't open.
+- v18: ↻ rotate button on each photo in the editor.
 
 ### Files
 
@@ -170,7 +175,7 @@ No build step, plain HTML/CSS/JS.
   Rebuilt from there with:
   `echo 'import N from "nepali-datetime"; window.NepaliDate = N;' | ./node_modules/.bin/esbuild --bundle --minify --format=iife --outfile=<this>/nepali.js`
 - `sw.js`: cache-first service worker. **Bump `VERSION` on every change**
-  (now `v16`), or phones keep the old version. The user must close and reopen
+  (now `v18`), or phones keep the old version. The user must close and reopen
   the app twice to get updates.
 - `style.css`: all styling. The search bar is `#searchBar`, fixed to the bottom.
 - `manifest.json`, `icon-192.png`, `icon-512.png`.
