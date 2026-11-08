@@ -1,0 +1,60 @@
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: #16161a; color: #eee;
+  font: 16px system-ui, sans-serif;
+  padding-bottom: 90px;
+}
+header {
+  position: sticky; top: 0; z-index: 2; display: flex; gap: 8px;
+  padding: 10px; background: #16161a;
+}
+input, button, .btn {
+  font: inherit; color: inherit; background: #26262c;
+  border: 1px solid #333; border-radius: 10px; padding: 12px;
+}
+input { width: 100%; }
+#search { flex: 1; }
+#menuBtn { width: 48px; }
+#count { padding: 0 12px 6px; color: #888; font-size: 13px; }
+
+.item {
+  display: flex; gap: 12px; padding: 8px 10px; border-bottom: 1px solid #222;
+}
+.item img {
+  width: 76px; height: 76px; object-fit: cover; border-radius: 8px;
+  background: #222; flex-shrink: 0;
+}
+.item .info { flex: 1; min-width: 0; }
+.item .name { font-weight: 600; overflow-wrap: anywhere; }
+.item .meta { color: #999; font-size: 14px; margin-top: 4px; }
+.item .rate { color: #7ee2a8; font-weight: 600; }
+
+#addBtn {
+  position: fixed; right: 20px; bottom: 24px; width: 64px; height: 64px;
+  border-radius: 50%; font-size: 34px; background: #7c5cff; border: none;
+}
+
+dialog {
+  background: #1d1d22; color: #eee; border: 1px solid #333;
+  border-radius: 14px; width: min(94vw, 480px); padding: 14px;
+}
+dialog::backdrop { background: #000a; }
+#form, #menu { display: flex; flex-direction: column; gap: 10px; }
+#menu[open] { display: flex; }
+.row { display: flex; gap: 8px; }
+.row > * { flex: 1; }
+.primary { background: #7c5cff; border: none; }
+.danger { background: #5a1f24; border: none; }
+.btn { text-align: center; }
+
+.photo-pick {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 180px; border: 2px dashed #444; border-radius: 12px; overflow: hidden;
+}
+.photo-pick img { max-width: 100%; max-height: 300px; display: none; }
+.photo-pick.has img { display: block; }
+.photo-pick.has span { display: none; }
+#photoHint { color: #888; }
+
+#viewer { padding: 0; width: auto; max-width: 100vw; background: #000; }
+#viewerImg { max-width: 100vw; max-height: 90vh; display: block; }
