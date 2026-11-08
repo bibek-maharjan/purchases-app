@@ -277,19 +277,51 @@ function openEditor(item) {
   const sellers = [...new Set(items.map(i => i.seller).filter(Boolean))].sort();
   $('#sellers').replaceChildren(...sellers.map(s => new Option(s)));
   $('#editor').showModal();
-  if (!item) $('#photoInput').click();
 }
 
-$('#photoInput').onchange = async e => {
-  const file = e.target.files[0];
-  if (!file) return;
+async function usePhoto(file) {
+  setPreview('');
   $('#photoHint').textContent = 'Compressing…';
-  const [full, thumb] = await Promise.all([resize(file, 1280, 0.75), resize(file, 240, 0.7)]);
-  newPhoto = { full, thumb };
-  setPreview(URL.createObjectURL(thumb));
-  $('#photoHint').textContent = 'Tap to take photo';
-  e.target.value = '';
-};
+  try {
+    const [full, thumb] = await Promise.all([resize(file, 1280, 0.75), resize(file, 240, 0.7)]);
+    newPhoto = { full, thumb };
+    setPreview(URL.createObjectURL(thumb));
+  } catch {
+    alert('Could not read that image');
+  }
+  $('#photoHint').textContent = 'No photo';
+}
+
+for (const id of ['#cameraInput', '#uploadInput']) {
+  $(id).onchange = e => {
+    if (e.target.files[0]) usePhoto(e.target.files[0]);
+    e.target.value = '';
+  };
+}
+
+// Paste button (if the browser can read images from the clipboard).
+if (navigator.clipboard?.read) {
+  $('#pasteBtn').onclick = async () => {
+    try {
+      for (const entry of await navigator.clipboard.read()) {
+        const type = entry.types.find(t => t.startsWith('image/'));
+        if (type) return usePhoto(await entry.getType(type));
+      }
+      alert('No image in clipboard');
+    } catch {
+      alert('Could not paste. Allow clipboard access and try again.');
+    }
+  };
+} else {
+  $('#pasteBtn').hidden = true;
+}
+
+// Ctrl+V / long-press paste while the editor is open.
+document.addEventListener('paste', e => {
+  if (!$('#editor').open) return;
+  const file = [...e.clipboardData.files].find(f => f.type.startsWith('image/'));
+  if (file) { e.preventDefault(); usePhoto(file); }
+});
 
 $('#form').onsubmit = async e => {
   e.preventDefault();

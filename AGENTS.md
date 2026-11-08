@@ -48,6 +48,10 @@ Plan agreed with the user — build **two separate phone apps**, one at a time:
 - **Taps on an item** (list and gallery): photo → full photo only; ✎ icon
   (top right) → editor; anywhere else on the card → read-only details dialog
   (full photo + all fields, with Edit and Close buttons).
+- **Adding a photo**: + opens the form directly (no auto camera). Photo buttons:
+  Camera (`#cameraInput`, capture), Upload (`#uploadInput`), Paste (clipboard
+  API, hidden if unsupported). Pasting with Ctrl+V / long-press also works while
+  the form is open. All go through `usePhoto(file)`.
 
 ### Files
 
@@ -65,7 +69,7 @@ No build step, plain HTML/CSS/JS.
   Rebuilt from there with:
   `echo 'import N from "nepali-datetime"; window.NepaliDate = N;' | ./node_modules/.bin/esbuild --bundle --minify --format=iife --outfile=<this>/nepali.js`
 - `sw.js`: cache-first service worker. **Bump `VERSION` on every change**
-  (now `v7`), or phones keep the old version. The user must close and reopen
+  (now `v8`), or phones keep the old version. The user must close and reopen
   the app twice to get updates.
 - `manifest.json`, `icon-192.png`, `icon-512.png`.
 - `purchases-flow.mmd`: Mermaid diagram of the app flow. View it with
@@ -87,9 +91,8 @@ Pages rebuilds in about a minute. Check with
 - Local server: `python3 -m http.server 8931` in this folder.
   Port 8765 is taken by another app of the user.
 - The Playwright browser blocks file uploads and stops at dialogs. Feed photos
-  by fetching an image inside the page and setting `input.files` with a
-  `DataTransfer`, and stub `HTMLInputElement.prototype.click` so the camera
-  doesn't auto-open. Unregister the service worker and clear caches before
+  by making an image inside the page and setting `#uploadInput.files` with a
+  `DataTransfer`, then dispatching `change`. Unregister the service worker and clear caches before
   testing, or you'll test stale files.
 - Camera and compression on a real phone can only be tested by the user.
 

@@ -43,11 +43,15 @@
 
   <dialog id="editor">
     <form id="form" method="dialog">
-      <label class="photo-pick">
+      <div class="photo-pick">
         <img id="preview" alt="">
-        <span id="photoHint">Tap to take photo</span>
-        <input id="photoInput" type="file" accept="image/*" capture="environment" hidden>
-      </label>
+        <span id="photoHint">No photo</span>
+      </div>
+      <div class="row">
+        <label class="btn">Camera<input id="cameraInput" type="file" accept="image/*" capture="environment" hidden></label>
+        <label class="btn">Upload<input id="uploadInput" type="file" accept="image/*" hidden></label>
+        <button type="button" id="pasteBtn">Paste</button>
+      </div>
       <input name="title" placeholder="Item name" required>
       <div class="row">
         <input name="rate" type="number" inputmode="decimal" step="any" placeholder="Rate">
