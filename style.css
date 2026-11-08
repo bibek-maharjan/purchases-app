@@ -2,11 +2,15 @@
 body {
   margin: 0; background: #16161a; color: #eee;
   font: 16px system-ui, sans-serif;
-  padding-bottom: 90px;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: calc(150px + env(safe-area-inset-bottom));
 }
-header {
-  position: sticky; top: 0; z-index: 2; display: flex; gap: 8px;
-  padding: 10px; background: #16161a;
+/* Search lives at the bottom, within thumb reach. */
+#searchBar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 3;
+  display: flex; gap: 8px;
+  padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+  background: #16161a; border-top: 1px solid #26262c;
 }
 input, button, .btn, textarea {
   font: inherit; color: inherit; background: #26262c;
@@ -20,8 +24,8 @@ select {
   border: 1px solid #333; border-radius: 10px; padding: 12px 6px;
 }
 .hint { color: #888; font-size: 13px; margin-top: -4px; }
-#search { flex: 1; }
-#menuBtn, #viewBtn { width: 48px; }
+#search { flex: 1; min-width: 0; }
+#menuBtn, #viewBtn { width: 48px; flex: 0 0 48px; }
 #viewBtn { font-size: 22px; padding: 0; }
 #count { padding: 0 12px 6px; color: #888; font-size: 13px; }
 
@@ -78,8 +82,10 @@ select {
 #propList input { width: 22px; height: 22px; }
 
 #addBtn {
-  position: fixed; right: 20px; bottom: 24px; width: 64px; height: 64px;
+  position: fixed; right: 20px; bottom: calc(88px + env(safe-area-inset-bottom));
+  width: 64px; height: 64px;
   border-radius: 50%; font-size: 34px; background: #7c5cff; border: none;
+  z-index: 2;
 }
 
 dialog {

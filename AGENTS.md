@@ -13,9 +13,11 @@ They use both trackers ~99% of the time on their phone.
 
 Plan agreed with the user — build **two separate phone apps**, one at a time:
 
-1. **Purchases** (this repo): DONE, in use.
-2. **Clothes**: NOT STARTED. Build only after the user says Purchases is finished.
-3. **Migration** of old Obsidian data: LATER, after both apps are ready.
+1. **Purchases** (this repo): DONE, in use on the phone (v16 pending push).
+2. **Clothes**: NOT STARTED. The user will start it in a new session — see the
+   "Clothes app (next)" section for the reuse notes.
+3. **Migration** of old Obsidian data: purchases DONE; clothes LATER, after the
+   clothes app is ready.
 
 ## Purchases app
 
@@ -23,6 +25,17 @@ Plan agreed with the user — build **two separate phone apps**, one at a time:
 - Repo: https://github.com/bibek-maharjan/purchases-app (GitHub Pages from `main`, root)
 - GitHub account: **bibek-maharjan**. Never use `encore-media` (wrong account; an
   earlier copy there was deleted).
+
+### Status at handoff (Nov 2026)
+
+- Live version is **v15** (commit `6b0ca6d`): batched, fast import.
+- **v16 is written, tested and NOT committed or pushed yet** — the bottom search
+  bar (`index.html`, `style.css`, `sw.js` version bump). Do not lose this: check
+  `git status` first in a new session. It is still subject to the
+  push-only-when-asked rule, so ask before deploying it.
+- The user has their real data on the phone: 1,295 imported items, 1,031
+  thumbnails, 126 items with 2+ photos. Import was re-run successfully after
+  v15 and took seconds.
 
 ### Decisions (from the user)
 
@@ -66,6 +79,46 @@ Plan agreed with the user — build **two separate phone apps**, one at a time:
   purchase with that name. Never overwrites typed values; off when editing.
 - **Buy again** (button in the read-only view): opens a new item with name,
   rate, quantity, total, seller, notes, and photo copied, date = today.
+- **Layout (v16)**: no top header. A fixed bottom bar holds the search field
+  (thumb reach) plus ▦ and ⋮; the + button floats just above it. `#count` sits
+  at the very top. Body padding uses `env(safe-area-inset-*)`.
+
+### Storage: why IndexedDB and not file paths
+
+The user asked (Nov 2026) about storing photos as files on the phone and keeping
+only a path in the database. **Not possible for a PWA**: a web app can't write to
+a folder like `/DCIM/` and read it back by path. Desktop Chrome's folder-picker
+API isn't on Android Chrome, where the user works ~99% of the time. Storing a
+path would need a native Android app.
+
+IndexedDB is the right home, and it is fine at this size:
+
+- Android Chrome allows a large share of free disk (often GBs). Their whole
+  migration is ~87 MB.
+- Photos are stored as **Blobs** (raw binary), so they cost about what the JPEG
+  pixels cost, not more.
+- `navigator.storage.persist()` is called at startup (`app.js`, end of file), so
+  Chrome marks the data **persistent** and won't evict it under storage pressure.
+- The list/gallery only reads the small thumbnails; a full photo is read when
+  opened.
+
+The real risk is the user clearing site data or uninstalling the app — that is
+what the Export .zip backup is for. Do not add a "storage used" line unless the
+user asks.
+
+### Backup / import behaviour
+
+- Export writes `items.json` + `photos/<id>.jpg`, `<id>-2.jpg`, ... (store-only
+  zip, no compression: `zip.js`).
+- Import **replaces by id**, never duplicates, because ids are uuid5 of the
+  vault note filename. It is not a merge: re-importing resets an item to what is
+  in the zip, and items created in the app (random ids) are untouched.
+- Import cost: read zip (~0.3 s), then 1,209 thumbnails + 1,295 saves. Batched
+  since v15 (50 items per transaction, 8 thumbnails at a time) — 1,295 items went
+  from ~40 s to ~7 s on desktop. A phone is several times slower.
+- The button shows `Reading backup…` then `Importing 500 / 1295…`. If the user
+  says it looks stuck, the cause is usually the read step on a slow phone, not a
+  hang.
 
 ### Update history
 
@@ -84,6 +137,9 @@ Plan agreed with the user — build **two separate phone apps**, one at a time:
   transaction (was one transaction per item, ~8 s for 1,295 on desktop) and
   thumbnails are made 8 at a time with `mapLimit()` (the browser decodes on
   background threads). Full import of 1,295 items: ~40 s → ~7 s desktop.
+- v16: the search field moved to a fixed bar at the bottom (thumb reach), with
+  ▦ and ⋮ beside it, and the + button floating just above it. The top header is
+  gone; `#count` sits at the very top and body padding uses safe-area insets.
 
 ### Files
 
@@ -93,11 +149,12 @@ No build step, plain HTML/CSS/JS.
   dialog, menu dialog, photo viewer.
 - `app.js`: list/gallery (renders 30 at a time on scroll), view settings,
   search, details + Buy again, editor (name suggestions, auto-fill, photo
-  Camera/Upload/Paste), BS date picker + AD calendar, image resizing,
-  export/import.
+  Camera/Upload/Paste), BS date picker + AD calendar, image resizing
+  (`resize()`, `mapLimit()`), export/import (batched via `DB.saveMany`).
 - `db.js`: IndexedDB `purchases` DB. Store `items` (text fields + `thumb` Blob),
   store `photos` (array of full Blobs keyed by item id, first = cover; old items
-  hold a single Blob, `getPhotos()` always returns an array).
+  hold a single Blob, `getPhotos()` always returns an array). `saveMany(list)`
+  writes many items in one transaction (added v15 for import).
 - `zip.js`: hand-written store-only ZIP writer/reader for backups.
   Backup layout: `items.json` + `photos/<id>.jpg` (cover), `photos/<id>-2.jpg`,
   `photos/<id>-3.jpg`, ... for extra photos.
@@ -106,8 +163,9 @@ No build step, plain HTML/CSS/JS.
   Rebuilt from there with:
   `echo 'import N from "nepali-datetime"; window.NepaliDate = N;' | ./node_modules/.bin/esbuild --bundle --minify --format=iife --outfile=<this>/nepali.js`
 - `sw.js`: cache-first service worker. **Bump `VERSION` on every change**
-  (now `v13`), or phones keep the old version. The user must close and reopen
+  (now `v16`), or phones keep the old version. The user must close and reopen
   the app twice to get updates.
+- `style.css`: all styling. The search bar is `#searchBar`, fixed to the bottom.
 - `manifest.json`, `icon-192.png`, `icon-512.png`.
 - `purchases-flow.mmd`: Mermaid diagram of the app flow. View it with
   `mmaid purchases-flow.mmd`. Keep it updated when the flow changes.
@@ -132,10 +190,21 @@ Pages rebuilds in about a minute. Check with
 
 - Local server: `python3 -m http.server 8931` in this folder.
   Port 8765 is taken by another app of the user.
-- The Playwright browser blocks file uploads and stops at dialogs. Feed photos
-  by making an image inside the page and setting `#uploadInput.files` with a
-  `DataTransfer`, then dispatching `change`. Unregister the service worker and clear caches before
-  testing, or you'll test stale files.
+- The Playwright browser blocks file uploads (`setInputFiles` times out, even on
+  a hidden input) and stops at dialogs. Two workarounds that worked (v15/v16):
+  - **Files**: copy the zip into this folder, then inside the page
+    `fetch('test-import.zip')`, wrap it in a `File`, set `#importFile.files`
+    with a `DataTransfer`, and dispatch `change`. Delete the copy afterwards.
+  - **Dialogs**: override `window.confirm`/`window.alert` inside the page before
+    dispatching the event. Stale `page.on('dialog')` handlers from earlier runs
+    keep auto-dismissing, and `browser_handle_dialog` then reports "no modal
+    state" / "already handled". Closing the browser and starting fresh helps.
+- Use one script per run: a second `evaluate` on the same page after a
+  navigation hits "Execution context was destroyed".
+- Unregister the service worker and clear caches before testing, or you test
+  stale files.
+- Sparse test data is not enough for UI checks: importing their real migration
+  zip gives 1,295 items, 1,031 thumbnails, 126 multi-photo items.
 - Camera and compression on a real phone can only be tested by the user.
 
 ## Clothes app (next)
@@ -145,6 +214,20 @@ same search and photo handling). Fields come from the vault's
 `notion/clothes.base`: photo, name, type, color, shade, position, context,
 season, newness, where, price, size, brand, other, set. Fields use
 **pick-lists with "add new value"**. Confirm details with the user before building.
+
+Notes for that session (from the Purchases build — reuse, don't reinvent):
+
+- New repo, separate Pages site. GitHub account `bibek-maharjan` only.
+- Copy as-is or nearly: `zip.js`, `db.js` (rename the DB to `clothes`), `sw.js`,
+  `manifest.json`, icons, and the `nepali.js` rebuild command. No build step.
+- Reuse from `app.js` (this repo): `resize()`, `mapLimit()`, thumbnails
+  (240px q0.7) and full photos (1280px q0.75), the BS date logic + 📅 AD picker,
+  the bottom search bar layout (v16), the batched import (`DB.saveMany`), and the
+  read-only details dialog.
+- Keep the same rules: search splits on spaces and needs every word; export is a
+  manual .zip; bump `sw.js` `VERSION` on every change; don't deploy until asked.
+- The clothes tracker in the vault (`notion/clothes.base`, 63 notes) is the only
+  clothes data; migration of it is a separate later step.
 
 ## Migration (later)
 
