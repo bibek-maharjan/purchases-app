@@ -60,6 +60,8 @@ No build step, plain HTML/CSS/JS.
   (now `v5`), or phones keep the old version. The user must close and reopen
   the app twice to get updates.
 - `manifest.json`, `icon-192.png`, `icon-512.png`.
+- `purchases-flow.mmd`: Mermaid diagram of the app flow. View it with
+  `mmaid purchases-flow.mmd`. Keep it updated when the flow changes.
 
 Item shape: `{ id, created, name, rate, quantity, seller, date, dateBS, thumb }`.
 

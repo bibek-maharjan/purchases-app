@@ -1,0 +1,41 @@
+flowchart TD
+    A["Open Purchases app on phone"] --> B["Service worker loads app files from cache<br/>(works offline)"]
+    B --> C["Load all items from IndexedDB<br/>sorted newest first"]
+    C --> D["Show list, 30 items at a time<br/>small thumbnail + name + rate + BS date"]
+    D --> E{"What do you do?"}
+
+    E -->|Search| S1["Type words, e.g. bla bhat"]
+    S1 --> S2["Every word must appear somewhere in<br/>name, seller, quantity, rate, AD or BS date"]
+    S2 --> D
+
+    E -->|Tap thumbnail| V1["Load full photo from photos store"]
+    V1 --> V2["Show full 1280px photo"]
+    V2 --> D
+
+    E -->|Tap +| N1["Camera opens"]
+    N1 --> N2["Compress photo:<br/>full 1280px + thumbnail 240px"]
+    N2 --> F["Form: name, rate, quantity = 1, seller"]
+    E -->|Tap item| F
+    F --> G{"Pick date"}
+    G -->|Today| H["Today's BS date"]
+    G -->|Yesterday| H2["Yesterday's BS date"]
+    G -->|Custom| H3["BS Year / Month / Day dropdowns"]
+    H --> I{"Save or delete?"}
+    H2 --> I
+    H3 --> I
+    I -->|Save| J["Store text + thumbnail in items<br/>and full photo in photos<br/>(saves both BS and AD date)"]
+    I -->|Delete| K["Remove item and photo"]
+    J --> C
+    K --> C
+
+    E -->|Menu: Export| X1["Pack items.json + photos/*.jpg into a .zip"]
+    X1 --> X2["Download zip, keep it in phone storage or Drive"]
+    E -->|Menu: Import| Y1["Pick a backup .zip"]
+    Y1 --> Y2["Read items and photos, rebuild thumbnails"]
+    Y2 --> C
+
+    subgraph Update["Publishing an update (on PC)"]
+        U1["Edit code, bump VERSION in sw.js"] --> U2["git push to bibek-maharjan/purchases-app"]
+        U2 --> U3["GitHub Pages rebuilds"]
+        U3 --> U4["Phone gets it after closing<br/>and reopening the app twice"]
+    end
