@@ -15,7 +15,7 @@ Plan agreed with the user — build **two separate phone apps**, one at a time:
 
 1. **Purchases** (this repo): DONE, in use on the phone (v17).
 2. **Clothes**: v1 built and deployed (Nov 2026) in
-   `/run/media/bibek/New Volume/clothes-app` — it has its own `AGENTS.md`.
+   `/mnt/jarvis/clothes-app` — it has its own `AGENTS.md`.
 3. **Migration** of old Obsidian data: purchases DONE; clothes LATER, after the
    clothes app is ready.
 
@@ -184,7 +184,8 @@ No build step, plain HTML/CSS/JS.
   Rebuilt from there with:
   `echo 'import N from "nepali-datetime"; window.NepaliDate = N;' | ./node_modules/.bin/esbuild --bundle --minify --format=iife --outfile=<this>/nepali.js`
 - `sw.js`: cache-first service worker. **Bump `VERSION` on every change**
-  (now `v19`), or phones keep the old version. The user must close and reopen
+  (now `v20`; v20 = keyboard fix: viewport meta `interactive-widget=resizes-content`, so the
+  page shrinks above the keyboard instead of panning away from the results), or phones keep the old version. The user must close and reopen
   the app twice to get updates.
 - `style.css`: all styling. The search bar is `#searchBar`, fixed to the bottom.
 - `manifest.json`, `icon-192.png`, `icon-512.png`.
