@@ -38,6 +38,15 @@ const DB = (() => {
       tx.objectStore('items').put(item);
       if (photos) tx.objectStore('photos').put(photos, item.id);
     }),
+    // Many items in ONE transaction, so import isn't one round trip per item.
+    // list: [{ item, photos }]
+    saveMany: list => run(['items', 'photos'], 'readwrite', tx => {
+      const items = tx.objectStore('items'), photos = tx.objectStore('photos');
+      for (const { item, photos: p } of list) {
+        items.put(item);
+        if (p) photos.put(p, item.id);
+      }
+    }),
     remove: id => run(['items', 'photos'], 'readwrite', tx => {
       tx.objectStore('items').delete(id);
       tx.objectStore('photos').delete(id);

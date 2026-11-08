@@ -21,6 +21,19 @@ async function resize(file, maxSide, quality) {
   return new Promise(r => canvas.toBlob(r, 'image/jpeg', quality));
 }
 
+// Like Promise.all, but only `limit` items are in flight at once (keeps memory sane).
+async function mapLimit(list, limit, fn) {
+  const out = new Array(list.length);
+  let next = 0;
+  await Promise.all(Array.from({ length: Math.min(limit, list.length) }, async () => {
+    while (next < list.length) {
+      const i = next++;
+      out[i] = await fn(list[i], i);
+    }
+  }));
+  return out;
+}
+
 function thumbUrl(item) {
   if (!item.thumb) return '';
   if (!thumbUrls.has(item.id)) thumbUrls.set(item.id, URL.createObjectURL(item.thumb));
@@ -489,26 +502,41 @@ $('#exportBtn').onclick = async () => {
 $('#importFile').onchange = async e => {
   const file = e.target.files[0];
   if (!file) return;
+  const importLabel = $('#importLabel');
+  importLabel.textContent = 'Reading backup…';
   try {
     const entries = await Zip.read(file);
     const data = JSON.parse(await entries.get('items.json').text());
-    if (!confirm(`Import ${data.length} items? Items with the same ID will be replaced.`)) return;
-    for (const item of data) {
-      // Photos: <id>.jpg (cover), then <id>-2.jpg, <id>-3.jpg, ...
-      const photos = [];
-      for (let n = 1; ; n++) {
-        const data = entries.get(`photos/${item.id}${n > 1 ? `-${n}` : ''}.jpg`);
-        if (!data) break;
-        photos.push(new Blob([data], { type: 'image/jpeg' }));
-      }
-      item.thumb = photos[0] ? await resize(photos[0], 240, 0.7) : null;
-      item.photoCount = photos.length;
-      await DB.save(item, photos);
+    if (!confirm(`Import ${data.length} items? Items with the same ID will be replaced.`)) {
+      importLabel.textContent = 'Import backup';
+      e.target.value = '';
+      return;
+    }
+    // 50 items per save, thumbnails made 8 at a time (the browser decodes and
+    // encodes on other threads, so doing one at a time wastes them).
+    for (let start = 0; start < data.length; start += 50) {
+      const chunk = data.slice(start, start + 50);
+      const batch = await mapLimit(chunk, 8, async item => {
+        // Photos: <id>.jpg (cover), then <id>-2.jpg, <id>-3.jpg, ...
+        const photos = [];
+        for (let n = 1; ; n++) {
+          const blob = entries.get(`photos/${item.id}${n > 1 ? `-${n}` : ''}.jpg`);
+          if (!blob) break;
+          photos.push(new Blob([blob], { type: 'image/jpeg' }));
+        }
+        item.thumb = photos[0] ? await resize(photos[0], 240, 0.7) : null;
+        item.photoCount = photos.length;
+        return { item, photos };
+      });
+      await DB.saveMany(batch);
+      importLabel.textContent = `Importing ${Math.min(start + 50, data.length)} / ${data.length}…`;
+      await new Promise(r => setTimeout(r, 0));
     }
     alert('Import done');
   } catch (err) {
     alert('Import failed: ' + err.message);
   }
+  importLabel.textContent = 'Import backup';
   e.target.value = '';
   $('#menu').close();
   await load();

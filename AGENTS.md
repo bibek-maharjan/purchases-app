@@ -78,6 +78,12 @@ Plan agreed with the user — build **two separate phone apps**, one at a time:
 - v11: 📅 AD calendar picker that converts to BS.
 - v12: Total and Notes fields (searchable, show/hide in views).
 - v13: multiple photos per item (cover ★, remove ×, 📷 N badge).
+- v14: import shows progress on the button ("Importing 350 / 1295…"); the file
+  picker accepts `application/zip` too (some Android pickers grey out `.zip`).
+- v15: import is much faster: `DB.saveMany()` writes 50 items in one IndexedDB
+  transaction (was one transaction per item, ~8 s for 1,295 on desktop) and
+  thumbnails are made 8 at a time with `mapLimit()` (the browser decodes on
+  background threads). Full import of 1,295 items: ~40 s → ~7 s desktop.
 
 ### Files
 
@@ -147,6 +153,15 @@ Old data: about 1,490 notes in `Daybook/` (frontmatter `rate`, `seller`,
 the filename, e.g. `2026-11-08 08.14.32.md`) and 63 notes in `notion/`.
 Plan: a script that turns them into an import .zip
 (`items.json` + `photos/<id>.jpg` / `<id>-2.jpg` ..., compressed to 1280px).
+
+**Purchases migration script (done, Nov 2026):**
+`/run/media/bibek/New Volume/purchases-migration/migrate_daybook.py` (outside
+this repo). Run `python3 migrate_daybook.py` there; it writes
+`purchases-migration.zip` (~87 MB) and `migration-report.txt` (skipped notes +
+warnings). Item IDs are uuid5 of the note filename, so re-importing replaces
+instead of duplicating. BS dates come from the elec-tracker `nepali-datetime`
+via node. First run: 1,295 items (165 bills, 22 Unnamed, 126 with 2+ photos),
+1,209 photos, 198 notes skipped. Import tested in the browser: ~7 s (v15), all OK.
 
 **Purchases migration rules (agreed with the user).** The vault is never
 changed; the script just skips junk. Only `Daybook/` is migrated.
