@@ -5,7 +5,8 @@ let items = [];      // all items, newest first
 let results = [];    // items matching the search
 let shown = 0;       // how many results are rendered
 let editing = null;  // item being edited, or null for new
-let newPhoto = null; // { full, thumb } picked in the editor
+let editPhotos = [];  // photos in the editor: { full, thumb?, url }, first = cover
+let photosChanged = false;
 const thumbUrls = new Map();
 
 // ---------- Images ----------
@@ -29,7 +30,7 @@ function thumbUrl(item) {
 // ---------- Search ----------
 // Every word typed must appear (as part of a word) in some field.
 function matches(item, words) {
-  const text = [item.name, item.seller, item.quantity, item.rate, item.date, formatBS(item.dateBS)]
+  const text = [item.name, item.seller, item.quantity, item.rate, item.total, item.notes, item.date, formatBS(item.dateBS)]
     .join(' ').toLowerCase();
   return words.every(w => text.includes(w));
 }
@@ -51,7 +52,7 @@ function esc(s) {
 // ---------- View settings (list / gallery) ----------
 const PROPS = [
   ['photo', 'Photo'], ['name', 'Item name'], ['rate', 'Rate'], ['quantity', 'Quantity'],
-  ['seller', 'Seller'], ['dateBS', 'Date (BS)'], ['date', 'Date (AD)'],
+  ['total', 'Total'], ['seller', 'Seller'], ['notes', 'Notes'], ['dateBS', 'Date (BS)'], ['date', 'Date (AD)'],
 ];
 const allOn = () => Object.fromEntries(PROPS.map(([k]) => [k, true]));
 let view = { mode: 'list', cols: 2, list: allOn(), gallery: allOn() };
@@ -93,7 +94,7 @@ $('#closeView').onclick = () => $('#viewMenu').close();
 const fullUrls = new Map();
 async function setFullPhoto(img, item) {
   if (!fullUrls.has(item.id)) {
-    const blob = await DB.getPhoto(item.id);
+    const [blob] = await DB.getPhotos(item.id);
     if (!blob) return;
     fullUrls.set(item.id, URL.createObjectURL(blob));
   }
@@ -106,6 +107,7 @@ function itemHtml(item, on) {
   const parts = [
     hasRate && `<span class="rate">Rs ${esc(item.rate)}</span>`,
     show('quantity') && item.quantity && esc(item.quantity),
+    show('total') && item.total !== '' && item.total != null && `Total Rs ${esc(item.total)}`,
     show('seller') && item.seller && esc(item.seller),
   ].filter(Boolean);
   const dates = [
@@ -114,7 +116,8 @@ function itemHtml(item, on) {
   ].filter(Boolean);
   return (show('name') ? `<div class="name">${esc(item.name)}</div>` : '')
     + (parts.length ? `<div class="meta">${parts.join(' · ')}</div>` : '')
-    + (dates.length ? `<div class="meta">${dates.join(' ')}</div>` : '');
+    + (dates.length ? `<div class="meta">${dates.join(' ')}</div>` : '')
+    + (show('notes') && item.notes ? `<div class="meta notes">${esc(item.notes)}</div>` : '');
 }
 
 function renderMore() {
@@ -126,6 +129,7 @@ function renderMore() {
     el.className = gallery ? 'card' : 'item';
     el.innerHTML = `
       ${on.photo !== false ? `<img src="${thumbUrl(item)}" alt="" loading="lazy">` : ''}
+      ${on.photo !== false && item.photoCount > 1 ? `<span class="count-badge">📷 ${item.photoCount}</span>` : ''}
       <div class="info">${itemHtml(item, on)}</div>
       <button class="edit-btn" aria-label="Edit">✎</button>`;
     const img = el.querySelector('img');
@@ -149,15 +153,13 @@ new IntersectionObserver(entries => {
 let detailsItem = null;
 async function showDetails(item) {
   detailsItem = item;
-  const img = $('#detailsImg');
-  img.hidden = !item.thumb;
-  img.src = thumbUrl(item);
-  if (item.thumb) setFullPhoto(img, item);
   $('#detailsInfo').innerHTML = itemHtml(item, allOn());
+  showPhotos($('#detailsPhotos'), await DB.getPhotos(item.id));
   $('#details').showModal();
 }
-$('#detailsImg').onclick = () => viewPhoto(detailsItem);
+$('#detailsPhotos').onclick = () => viewPhoto(detailsItem);
 $('#detailsClose').onclick = () => $('#details').close();
+$('#details').onclose = () => showPhotos($('#detailsPhotos'), []);
 $('#detailsEdit').onclick = () => { $('#details').close(); openEditor(detailsItem); };
 
 // New item copied from an old one (photo too), dated today.
@@ -170,21 +172,34 @@ $('#detailsAgain').onclick = async () => {
   f.rate.value = old.rate ?? '';
   f.quantity.value = old.quantity ?? '';
   f.seller.value = old.seller ?? '';
-  if (old.thumb) {
-    setPreview(thumbUrl(old));
-    newPhoto = { full: await DB.getPhoto(old.id), thumb: old.thumb };
-  }
+  f.total.value = old.total ?? '';
+  f.notes.value = old.notes ?? '';
+  editPhotos = (await DB.getPhotos(old.id)).map(full => ({ full, url: URL.createObjectURL(full) }));
+  if (editPhotos[0]) editPhotos[0].thumb = old.thumb;
+  photosChanged = true;
+  renderStrip();
 };
 
+// Fills a container with <img>s for the given Blobs (frees the old ones).
+function showPhotos(box, blobs) {
+  for (const img of box.querySelectorAll('img')) URL.revokeObjectURL(img.src);
+  box.replaceChildren(...blobs.map(b => {
+    const img = document.createElement('img');
+    img.src = URL.createObjectURL(b);
+    return img;
+  }));
+}
+
+// Full-screen view of all the item's photos, one below the other.
 async function viewPhoto(item) {
-  const blob = await DB.getPhoto(item.id);
-  if (!blob) return;
-  $('#viewerImg').src = URL.createObjectURL(blob);
+  const blobs = await DB.getPhotos(item.id);
+  if (!blobs.length) return;
+  showPhotos($('#viewerPhotos'), blobs);
   $('#viewer').showModal();
 }
 $('#viewer').onclick = () => {
   $('#viewer').close();
-  URL.revokeObjectURL($('#viewerImg').src);
+  showPhotos($('#viewerPhotos'), []);
 };
 
 // ---------- Dates (BS) ----------
@@ -281,9 +296,35 @@ for (const b of document.querySelectorAll('.date-quick button')) {
 
 // ---------- Editor ----------
 
-function setPreview(url) {
-  $('#preview').src = url || '';
-  $('.photo-pick').classList.toggle('has', !!url);
+// Editor photo row: ★ makes a photo the cover (first), × removes it.
+function renderStrip() {
+  $('#photoHint').hidden = editPhotos.length > 0;
+  $('#photoStrip').replaceChildren(...editPhotos.map((p, i) => {
+    const el = document.createElement('div');
+    el.className = 'thumb';
+    el.innerHTML = `<img src="${p.url}" alt="">
+      <button type="button" class="cover" aria-label="Make cover">★</button>
+      <button type="button" class="del" aria-label="Remove">×</button>`;
+    el.querySelector('.cover').onclick = () => {
+      editPhotos.unshift(...editPhotos.splice(i, 1));
+      photosChanged = true;
+      renderStrip();
+    };
+    el.querySelector('.del').onclick = () => {
+      URL.revokeObjectURL(p.url);
+      editPhotos.splice(i, 1);
+      photosChanged = true;
+      renderStrip();
+    };
+    return el;
+  }));
+}
+
+function clearStrip() {
+  for (const p of editPhotos) URL.revokeObjectURL(p.url);
+  editPhotos = [];
+  photosChanged = false;
+  renderStrip();
 }
 
 // Unique values, most used first (case-insensitive, keeps the latest spelling).
@@ -299,24 +340,31 @@ function mostUsed(values) {
   return [...counts.values()].sort((a, b) => b.n - a.n).map(c => c.text);
 }
 
-function openEditor(item) {
+async function openEditor(item) {
   editing = item;
-  newPhoto = null;
+  clearStrip();
   const f = $('#form');
   f.reset();
   f.title.value = item?.name ?? '';
   f.rate.value = item?.rate ?? '';
   f.quantity.value = item ? item.quantity : '1';
   f.seller.value = item?.seller ?? '';
+  f.total.value = item?.total ?? '';
+  f.notes.value = item?.notes ?? '';
   const bs = item?.dateBS ?? adToBS(today());
   setBSPicker(bs);
   pickDay(bs === adToBS(today()) ? 'today' : bs === adToBS(yesterday()) ? 'yesterday' : 'custom');
-  setPreview(item ? thumbUrl(item) : '');
   $('#deleteBtn').hidden = !item;
   const sellers = [...new Set(items.map(i => i.seller).filter(Boolean))].sort();
   $('#sellers').replaceChildren(...sellers.map(s => new Option(s)));
   $('#names').replaceChildren(...mostUsed(items.map(i => i.name)).map(n => new Option(n)));
   $('#editor').showModal();
+  if (item) {
+    const saved = (await DB.getPhotos(item.id)).map(full => ({ full, url: URL.createObjectURL(full) }));
+    if (saved[0]) saved[0].thumb = item.thumb;
+    editPhotos = [...saved, ...editPhotos];
+    renderStrip();
+  }
 }
 
 // Auto-fill: picking a known name on a new item fills empty fields from the last purchase.
@@ -331,17 +379,19 @@ $('#form').title.onchange = () => {
   if (f.seller.value === '') f.seller.value = last.seller ?? '';
 };
 
+// Adds a photo to the editor (Camera, Upload, or Paste).
 async function usePhoto(file) {
-  setPreview('');
+  $('#photoHint').hidden = false;
   $('#photoHint').textContent = 'Compressing…';
   try {
     const [full, thumb] = await Promise.all([resize(file, 1280, 0.75), resize(file, 240, 0.7)]);
-    newPhoto = { full, thumb };
-    setPreview(URL.createObjectURL(thumb));
+    editPhotos.push({ full, thumb, url: URL.createObjectURL(thumb) });
+    photosChanged = true;
   } catch {
     alert('Could not read that image');
   }
   $('#photoHint').textContent = 'No photo';
+  renderStrip();
 }
 
 for (const id of ['#cameraInput', '#uploadInput']) {
@@ -385,17 +435,26 @@ $('#form').onsubmit = async e => {
     rate: f.rate.value === '' ? '' : Number(f.rate.value),
     quantity: f.quantity.value.trim(),
     seller: f.seller.value.trim(),
+    total: f.total.value === '' ? '' : Number(f.total.value),
+    notes: f.notes.value.trim(),
     date: pickerAD(),
     dateBS: pickerBS(),
-    thumb: newPhoto?.thumb ?? editing?.thumb ?? null,
+    thumb: editing?.thumb ?? null,
+    photoCount: editing?.photoCount ?? (editing?.thumb ? 1 : 0),
   };
-  await DB.save(item, newPhoto?.full);
+  if (photosChanged) {
+    const cover = editPhotos[0];
+    item.thumb = cover ? cover.thumb ?? await resize(cover.full, 240, 0.7) : null;
+    item.photoCount = editPhotos.length;
+  }
+  await DB.save(item, photosChanged ? editPhotos.map(p => p.full) : undefined);
   thumbUrls.delete(item.id);
   fullUrls.delete(item.id);
   $('#editor').close();
   await load();
 };
 
+$('#editor').onclose = clearStrip;
 $('#cancelBtn').onclick = () => $('#editor').close();
 
 $('#deleteBtn').onclick = async () => {
@@ -415,8 +474,8 @@ $('#exportBtn').onclick = async () => {
   const data = [];
   for (const { thumb, ...rest } of items) {
     data.push(rest);
-    const photo = await DB.getPhoto(rest.id);
-    if (photo) files.push({ name: `photos/${rest.id}.jpg`, data: photo });
+    (await DB.getPhotos(rest.id)).forEach((data, i) =>
+      files.push({ name: `photos/${rest.id}${i ? `-${i + 1}` : ''}.jpg`, data }));
   }
   files.unshift({ name: 'items.json', data: new Blob([JSON.stringify(data, null, 1)]) });
   const zip = await Zip.create(files);
@@ -435,14 +494,16 @@ $('#importFile').onchange = async e => {
     const data = JSON.parse(await entries.get('items.json').text());
     if (!confirm(`Import ${data.length} items? Items with the same ID will be replaced.`)) return;
     for (const item of data) {
-      const photo = entries.get(`photos/${item.id}.jpg`);
-      let full = null;
-      item.thumb = null;
-      if (photo) {
-        full = new Blob([photo], { type: 'image/jpeg' });
-        item.thumb = await resize(full, 240, 0.7);
+      // Photos: <id>.jpg (cover), then <id>-2.jpg, <id>-3.jpg, ...
+      const photos = [];
+      for (let n = 1; ; n++) {
+        const data = entries.get(`photos/${item.id}${n > 1 ? `-${n}` : ''}.jpg`);
+        if (!data) break;
+        photos.push(new Blob([data], { type: 'image/jpeg' }));
       }
-      await DB.save(item, full);
+      item.thumb = photos[0] ? await resize(photos[0], 240, 0.7) : null;
+      item.photoCount = photos.length;
+      await DB.save(item, photos);
     }
     alert('Import done');
   } catch (err) {

@@ -1,6 +1,6 @@
 // IndexedDB wrapper. Three stores:
 //   items  – text fields + small thumbnail (loaded for list & search)
-//   photos – full compressed photo, loaded only when needed
+//   photos – array of full compressed photos (first = cover), loaded only when needed
 const DB = (() => {
   let dbp;
   function open() {
@@ -28,10 +28,15 @@ const DB = (() => {
 
   return {
     allItems: () => run('items', 'readonly', tx => tx.objectStore('items').getAll()),
-    getPhoto: id => run('photos', 'readonly', tx => tx.objectStore('photos').get(id)),
-    save: (item, photo) => run(['items', 'photos'], 'readwrite', tx => {
+    // Always an array. Old items stored a single Blob.
+    getPhotos: async id => {
+      const v = await run('photos', 'readonly', tx => tx.objectStore('photos').get(id));
+      return Array.isArray(v) ? v : v ? [v] : [];
+    },
+    // photos: array of full Blobs, or undefined to leave them unchanged.
+    save: (item, photos) => run(['items', 'photos'], 'readwrite', tx => {
       tx.objectStore('items').put(item);
-      if (photo) tx.objectStore('photos').put(photo, item.id);
+      if (photos) tx.objectStore('photos').put(photos, item.id);
     }),
     remove: id => run(['items', 'photos'], 'readwrite', tx => {
       tx.objectStore('items').delete(id);

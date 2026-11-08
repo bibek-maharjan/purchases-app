@@ -4,14 +4,14 @@ flowchart TD
     C --> V["▦ View: List or Gallery (1–5 columns), pick fields to show"]
     V --> C
     C --> D["Optional search: every word must match"]
-    D --> P["Tap photo: full photo only"]
+    D --> P["Tap photo: all photos, full size"]
     D --> R["Tap card text: read-only details (Edit button inside)"]
     R --> E
     R --> BA["Buy again: copy item + photo, date today"]
     BA --> G
     D --> E["Tap + (new) or ✎ on an item (edit)"]
-    E --> G["Form: name (suggestions + auto-fill), rate, qty 1, seller"]
-    G --> F["Photo: Camera / Upload / Paste → full 1280px + thumb 240px"]
+    E --> G["Form: name (suggestions + auto-fill), rate, qty 1, total, seller, notes"]
+    G --> F["Photos: Camera / Upload / Paste adds one (★ cover, × remove) → 1280px + 240px thumb"]
     F --> G
     G --> H["Date: Today / Yesterday / Custom BS"]
     H --> I["Save on phone (BS + AD date)"]

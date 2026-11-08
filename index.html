@@ -43,10 +43,8 @@
 
   <dialog id="editor">
     <form id="form" method="dialog">
-      <div class="photo-pick">
-        <img id="preview" alt="">
-        <span id="photoHint">No photo</span>
-      </div>
+      <div id="photoStrip"></div>
+      <div id="photoHint" class="hint">No photo</div>
       <div class="row">
         <label class="btn">Camera<input id="cameraInput" type="file" accept="image/*" capture="environment" hidden></label>
         <label class="btn">Upload<input id="uploadInput" type="file" accept="image/*" hidden></label>
@@ -58,8 +56,10 @@
         <input name="rate" type="number" inputmode="decimal" step="any" placeholder="Rate">
         <input name="quantity" placeholder="Quantity (e.g. 20 kg)">
       </div>
+      <input name="total" type="number" inputmode="decimal" step="any" placeholder="Total">
       <input name="seller" placeholder="Seller" list="sellers">
       <datalist id="sellers"></datalist>
+      <textarea name="notes" rows="2" placeholder="Notes"></textarea>
       <div class="row date-quick">
         <button type="button" data-day="today">Today</button>
         <button type="button" data-day="yesterday">Yesterday</button>
@@ -81,7 +81,7 @@
   </dialog>
 
   <dialog id="details">
-    <img id="detailsImg" alt="">
+    <div id="detailsPhotos"></div>
     <div id="detailsInfo"></div>
     <div class="row">
       <button type="button" id="detailsEdit">Edit</button>
@@ -90,7 +90,7 @@
     </div>
   </dialog>
 
-  <dialog id="viewer"><img id="viewerImg" alt=""></dialog>
+  <dialog id="viewer"><div id="viewerPhotos"></div></dialog>
 
   <script src="nepali.js"></script>
   <script src="zip.js"></script>

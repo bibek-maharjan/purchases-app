@@ -28,14 +28,15 @@ Plan agreed with the user — build **two separate phone apps**, one at a time:
 
 - PWA, offline, **phone only**. No server, no sync. Data lives in IndexedDB.
 - Backup = manual **Export/Import .zip** (in the ⋮ menu).
-- Fields: photo, item name, rate, quantity (defaults to `1`), seller, date.
+- Fields: photo, item name, rate, quantity (defaults to `1`), total, seller,
+  notes (free text), date. Total and notes added in v12.
   Just a log, no price-history comparison.
 - **Search**: split input on spaces; every word must appear (case-insensitive,
   part-of-word) somewhere across the item's fields, including the BS date text.
   `bla bhat` → "Black jacket" from bhatbhateni.
 - **Photos**: full = 1280px JPEG q0.75 (user confirmed this is right — do not
-  change); thumbnail = 240px q0.7 for the list and the form preview. Tapping the
-  list thumbnail opens the full photo.
+  change); thumbnail = 240px q0.7 for the list, small gallery cards, and the form
+  preview. Tapping a photo opens the full photo.
 - **Dates**: BS (Bikram Sambat) first. The form shows Today / Yesterday / Custom
   buttons; Custom reveals BS Year/Month/Day dropdowns. The hint line shows
   `22 Kartik 2083 · AD 2026-11-08`. List shows BS with AD in brackets.
@@ -44,47 +45,68 @@ Plan agreed with the user — build **two separate phone apps**, one at a time:
   an AD date and converts it into the BS dropdowns.
 - **Views** (▦ button): List or Gallery. Gallery has one +/− control for 1–5
   columns (this also sets card size). Each view has its own show/hide checkboxes
-  for photo, name, rate, quantity, seller, BS date, and AD date. Saved in
+  for photo, name, rate, quantity, total, seller, notes, BS date, and AD date. Saved in
   `localStorage` under the key `view`. Gallery at 1–2 columns loads the full photo
   so it stays sharp; at 3 or more columns it uses the thumbnail.
 - **Taps on an item** (list and gallery): photo → full photo only; ✎ icon
   (top right) → editor; anywhere else on the card → read-only details dialog
-  (full photo + all fields, with Edit and Close buttons).
+  (`#details`: full photo + all fields, with Edit, Buy again, and Close buttons).
 - **Adding a photo**: + opens the form directly (no auto camera). Photo buttons:
   Camera (`#cameraInput`, capture), Upload (`#uploadInput`), Paste (clipboard
   API, hidden if unsupported). Pasting with Ctrl+V / long-press also works while
-  the form is open. All go through `usePhoto(file)`.
+  the form is open. All go through `usePhoto(file)`, which **adds** a photo.
+- **Multiple photos** (v13): the editor shows a photo row (`#photoStrip`); ★
+  makes a photo the cover (first), × removes it. The cover's thumbnail is
+  `item.thumb`; `item.photoCount` drives the `📷 N` badge on list/gallery items.
+  Tapping a photo, and the read-only view, show all photos stacked vertically.
 - **Item name suggestions**: `#names` datalist, most-used names first
   (case-insensitive, `mostUsed()`). Seller uses a datalist too (alphabetical).
 - **Auto-fill**: on a new item, picking a known name fills empty rate, seller,
   and quantity (quantity also when it's still the default `1`) from the latest
   purchase with that name. Never overwrites typed values; off when editing.
 - **Buy again** (button in the read-only view): opens a new item with name,
-  rate, quantity, seller, and photo copied, date = today.
+  rate, quantity, total, seller, notes, and photo copied, date = today.
+
+### Update history
+
+- v1–v5: first version: list, search, editor, BS dates, photos, export/import.
+- v6: List / Gallery views, 1–5 columns, show/hide fields per view.
+- v7: ✎ edit icon; tapping the card opens the read-only details view.
+- v8: + no longer opens the camera; photo via Camera / Upload / Paste.
+- v9: item name suggestions (most used first).
+- v10: auto-fill from the last purchase; Buy again button.
+- v11: 📅 AD calendar picker that converts to BS.
+- v12: Total and Notes fields (searchable, show/hide in views).
+- v13: multiple photos per item (cover ★, remove ×, 📷 N badge).
 
 ### Files
 
 No build step, plain HTML/CSS/JS.
 
-- `index.html`: layout, editor dialog, menu dialog, photo viewer.
-- `app.js`: list (renders 30 at a time on scroll), search, editor, BS date
-  picker, image resizing, export/import.
+- `index.html`: layout, view-settings dialog, editor dialog, read-only details
+  dialog, menu dialog, photo viewer.
+- `app.js`: list/gallery (renders 30 at a time on scroll), view settings,
+  search, details + Buy again, editor (name suggestions, auto-fill, photo
+  Camera/Upload/Paste), BS date picker + AD calendar, image resizing,
+  export/import.
 - `db.js`: IndexedDB `purchases` DB. Store `items` (text fields + `thumb` Blob),
-  store `photos` (full Blob keyed by item id).
+  store `photos` (array of full Blobs keyed by item id, first = cover; old items
+  hold a single Blob, `getPhotos()` always returns an array).
 - `zip.js`: hand-written store-only ZIP writer/reader for backups.
-  Backup layout: `items.json` + `photos/<id>.jpg`.
+  Backup layout: `items.json` + `photos/<id>.jpg` (cover), `photos/<id>-2.jpg`,
+  `photos/<id>-3.jpg`, ... for extra photos.
 - `nepali.js`: `nepali-datetime` v2.0.0 bundled as a global `NepaliDate`.
   Same library as `~/Projects/elec-tracker` (the user's reference for BS dates).
   Rebuilt from there with:
   `echo 'import N from "nepali-datetime"; window.NepaliDate = N;' | ./node_modules/.bin/esbuild --bundle --minify --format=iife --outfile=<this>/nepali.js`
 - `sw.js`: cache-first service worker. **Bump `VERSION` on every change**
-  (now `v11`), or phones keep the old version. The user must close and reopen
+  (now `v13`), or phones keep the old version. The user must close and reopen
   the app twice to get updates.
 - `manifest.json`, `icon-192.png`, `icon-512.png`.
 - `purchases-flow.mmd`: Mermaid diagram of the app flow. View it with
   `mmaid purchases-flow.mmd`. Keep it updated when the flow changes.
 
-Item shape: `{ id, created, name, rate, quantity, seller, date, dateBS, thumb }`.
+Item shape: `{ id, created, name, rate, quantity, total, seller, notes, date, dateBS, thumb, photoCount }`.
 
 ### Deploy
 
@@ -124,7 +146,28 @@ Old data: about 1,490 notes in `Daybook/` (frontmatter `rate`, `seller`,
 `quantity`, `aliases` = item name; `photo:: ![[image]]` in the body; date from
 the filename, e.g. `2026-11-08 08.14.32.md`) and 63 notes in `notion/`.
 Plan: a script that turns them into an import .zip
-(`items.json` + `photos/<id>.jpg`, compressed to 1280px).
+(`items.json` + `photos/<id>.jpg` / `<id>-2.jpg` ..., compressed to 1280px).
+
+**Purchases migration rules (agreed with the user).** The vault is never
+changed; the script just skips junk. Only `Daybook/` is migrated.
+
+- Skip: notes with no rate and no `Total` (unless a bill); completely empty
+  notes; `Time.md` and its conflict copy; images not linked from any note;
+  duplicate image copies; broken links (missing files, PDFs, videos).
+- Bills (alias `bill`): always keep, even without a price (items are written
+  on the bill photo). Notes with seller + `Total` but no name also count as bills.
+- No name but has a rate → name "Unnamed".
+- Several aliases → join with commas (`refrigerator, fridge`).
+- Several photos → keep all, in note order (first = cover). Zip names
+  `<id>.jpg`, `<id>-2.jpg`, ... (app supports this since v13).
+- `quantity` → app Quantity; `Total` → app **Total** field (v12).
+  `description` and `department` → app **Notes** field, e.g.
+  `khaksi 40 golo · plumbing`. `during` is almost always empty → dropped.
+- Read typo keys too: `rate:`, `description:` (extra colon), and `name:` when
+  `aliases` is missing.
+- Survey numbers (Nov 2026): 1,493 notes, 314 with no rate/Total, 145 bills,
+  58 no name, 138 several names, 141 several photos, 237 unlinked images
+  (53 MB), 370 duplicate image copies, 15 broken links.
 
 ## User preferences
 
