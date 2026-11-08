@@ -33,9 +33,6 @@ Plan agreed with the user — build **two separate phone apps**, one at a time:
 - Everything in this repo is committed; a new session should start clean.
 - The user has their real data on the phone: 1,295 imported items, 1,031
   thumbnails, 126 items with 2+ photos. Import took seconds after v15.
-- The user has their real data on the phone: 1,295 imported items, 1,031
-  thumbnails, 126 items with 2+ photos. Import was re-run successfully after
-  v15 and took seconds.
 
 ### Decisions (from the user)
 
