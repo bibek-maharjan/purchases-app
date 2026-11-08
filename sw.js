@@ -10,7 +10,8 @@ self.addEventListener('install', e => {
 
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys().then(keys =>
-    Promise.all(keys.filter(k => k !== VERSION).map(k => caches.delete(k)))));
+    // Only our own old caches ('v15', ...): the Clothes app shares this website.
+    Promise.all(keys.filter(k => /^v\d+$/.test(k) && k !== VERSION).map(k => caches.delete(k)))));
   self.clients.claim();
 });
 

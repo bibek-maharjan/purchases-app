@@ -28,11 +28,11 @@ Plan agreed with the user — build **two separate phone apps**, one at a time:
 
 ### Status at handoff (Nov 2026)
 
-- Live version is **v15** (commit `6b0ca6d`): batched, fast import.
-- **v16 is written, tested and NOT committed or pushed yet** — the bottom search
-  bar (`index.html`, `style.css`, `sw.js` version bump). Do not lose this: check
-  `git status` first in a new session. It is still subject to the
-  push-only-when-asked rule, so ask before deploying it.
+- Live version is **v16** (commit `da78a05`): bottom search bar. v15 (`6b0ca6d`)
+  was the fast batched import. Both are pushed and the Pages build is green.
+- Everything in this repo is committed; a new session should start clean.
+- The user has their real data on the phone: 1,295 imported items, 1,031
+  thumbnails, 126 items with 2+ photos. Import took seconds after v15.
 - The user has their real data on the phone: 1,295 imported items, 1,031
   thumbnails, 126 items with 2+ photos. Import was re-run successfully after
   v15 and took seconds.
