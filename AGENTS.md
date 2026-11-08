@@ -13,9 +13,9 @@ They use both trackers ~99% of the time on their phone.
 
 Plan agreed with the user — build **two separate phone apps**, one at a time:
 
-1. **Purchases** (this repo): DONE, in use on the phone (v16 pending push).
-2. **Clothes**: NOT STARTED. The user will start it in a new session — see the
-   "Clothes app (next)" section for the reuse notes.
+1. **Purchases** (this repo): DONE, in use on the phone (v17).
+2. **Clothes**: v1 built and deployed (Nov 2026) in
+   `/run/media/bibek/New Volume/clothes-app` — it has its own `AGENTS.md`.
 3. **Migration** of old Obsidian data: purchases DONE; clothes LATER, after the
    clothes app is ready.
 
@@ -28,11 +28,16 @@ Plan agreed with the user — build **two separate phone apps**, one at a time:
 
 ### Status at handoff (Nov 2026)
 
-- Live version is **v16** (commit `da78a05`): bottom search bar. v15 (`6b0ca6d`)
-  was the fast batched import. Both are pushed and the Pages build is green.
+- Live version is **v17**: fixes Export (and the details view) for items with
+  no photo. v16 (`da78a05`) was the bottom search bar, v15 (`6b0ca6d`) the fast
+  batched import.
 - Everything in this repo is committed; a new session should start clean.
-- The user has their real data on the phone: 1,295 imported items, 1,031
-  thumbnails, 126 items with 2+ photos. Import took seconds after v15.
+- The user's phone had 1,295 items (1,031 thumbnails, 126 with 2+ photos) after
+  the first migration import.
+- **Pending on the phone:** import `purchases-photo-only.zip` (14 MB, in the
+  migration folder) to add the 165 bills that were skipped for having no
+  rate/Total. It brings the app to 1,460 items and touches nothing else. Tested
+  in a browser: 1,295 → 1,460 in ~2 s, zero overlapping ids.
 
 ### Decisions (from the user)
 
@@ -137,6 +142,11 @@ user asks.
 - v16: the search field moved to a fixed bar at the bottom (thumb reach), with
   ▦ and ⋮ beside it, and the + button floating just above it. The top header is
   gone; `#count` sits at the very top and body padding uses safe-area insets.
+  `sw.js` now deletes only its own old caches (`v<number>`), because the Clothes
+  app shares the same website (`bibek-maharjan.github.io`) and its caches.
+- v17: bug fix in `db.js` `run()`: for an item with no photo, `getPhotos()`
+  returned the IndexedDB request object instead of `[]`, so Export hung at
+  "Exporting…" and the details view of photo-less items didn't open.
 
 ### Files
 
@@ -236,21 +246,33 @@ Plan: a script that turns them into an import .zip
 
 **Purchases migration script (done, Nov 2026):**
 `/run/media/bibek/New Volume/purchases-migration/migrate_daybook.py` (outside
-this repo). Run `python3 migrate_daybook.py` there; it writes
-`purchases-migration.zip` (~87 MB) and `migration-report.txt` (skipped notes +
-warnings). Item IDs are uuid5 of the note filename, so re-importing replaces
-instead of duplicating. BS dates come from the elec-tracker `nepali-datetime`
-via node. First run: 1,295 items (165 bills, 22 Unnamed, 126 with 2+ photos),
-1,209 photos, 198 notes skipped. Import tested in the browser: ~7 s (v15), all OK.
+this repo). Run `python3 migrate_daybook.py` there (~13 s); it writes two zips
+and `migration-report.txt`:
+
+- `purchases-migration.zip` (~101 MB) — everything, 1,460 items.
+- `purchases-photo-only.zip` (~14 MB) — **only** the 165 items kept just because
+  they have a photo (bills with no rate/Total). Nothing in it is also in the
+  first zip, so importing it adds those items and leaves the rest untouched.
+  This is the one the user imported on 2026-11-08 (1,295 → 1,460, ~2 s).
+
+Item IDs are uuid5 of the note filename, so re-importing replaces instead of
+duplicating. BS dates come from the elec-tracker `nepali-datetime` via node.
+Current numbers: 1,493 notes read, 1,460 items (174 named "bill", 22 Unnamed,
+165 kept only for a photo, 138 with 2+ photos), 1,389 photos, 33 notes skipped.
 
 **Purchases migration rules (agreed with the user).** The vault is never
 changed; the script just skips junk. Only `Daybook/` is migrated.
 
-- Skip: notes with no rate and no `Total` (unless a bill); completely empty
+- Skip: notes with no rate, no `Total` **and no photo**; completely empty
   notes; `Time.md` and its conflict copy; images not linked from any note;
   duplicate image copies; broken links (missing files, PDFs, videos).
 - Bills (alias `bill`): always keep, even without a price (items are written
   on the bill photo). Notes with seller + `Total` but no name also count as bills.
+- **Rule change (Nov 2026):** a note with no rate and no `Total` but *with a
+  photo* is kept too, under the name the user wrote (rate and total stay empty);
+  with no name it becomes "bill". The user spotted a skipped bill ("Upvc
+  aluminum", sitapaila, 2025-10-29) and asked for these. This brought back 165
+  items (157 named + 8 unnamed), which is what `purchases-photo-only.zip` holds.
 - No name but has a rate → name "Unnamed".
 - Several aliases → join with commas (`refrigerator, fridge`).
 - Several photos → keep all, in note order (first = cover). Zip names
