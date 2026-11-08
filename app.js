@@ -126,7 +126,7 @@ function setBSPicker(bs) {
   $('#bsYear').value = y;
   $('#bsMonth').value = m;
   $('#bsDay').value = Math.min(d, days);
-  $('#adDate').textContent = 'AD: ' + pickerAD();
+  $('#adDate').textContent = `${formatBS(pickerBS())} · AD ${pickerAD()}`;
 }
 
 function pickerBS() {
@@ -148,6 +148,26 @@ for (const id of ['#bsYear', '#bsMonth', '#bsDay']) {
   };
 }
 
+function yesterday() {
+  const [y, m, d] = today().split('-').map(Number);
+  const t = new Date(Date.UTC(y, m - 1, d - 1));
+  return t.toISOString().slice(0, 10);
+}
+
+// Today / Yesterday set the date directly; Custom shows the BS dropdowns.
+function pickDay(choice) {
+  if (choice === 'today') setBSPicker(adToBS(today()));
+  if (choice === 'yesterday') setBSPicker(adToBS(yesterday()));
+  $('#customDate').hidden = choice !== 'custom';
+  for (const b of document.querySelectorAll('.date-quick button')) {
+    b.classList.toggle('active', b.dataset.day === choice);
+  }
+}
+
+for (const b of document.querySelectorAll('.date-quick button')) {
+  b.onclick = () => pickDay(b.dataset.day);
+}
+
 // ---------- Editor ----------
 
 function setPreview(url) {
@@ -162,9 +182,11 @@ function openEditor(item) {
   f.reset();
   f.title.value = item?.name ?? '';
   f.rate.value = item?.rate ?? '';
-  f.quantity.value = item?.quantity ?? '';
+  f.quantity.value = item ? item.quantity : '1';
   f.seller.value = item?.seller ?? '';
-  setBSPicker(item?.dateBS ?? adToBS(today()));
+  const bs = item?.dateBS ?? adToBS(today());
+  setBSPicker(bs);
+  pickDay(bs === adToBS(today()) ? 'today' : bs === adToBS(yesterday()) ? 'yesterday' : 'custom');
   setPreview(item ? thumbUrl(item) : '');
   $('#deleteBtn').hidden = !item;
   const sellers = [...new Set(items.map(i => i.seller).filter(Boolean))].sort();

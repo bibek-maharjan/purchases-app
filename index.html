@@ -39,7 +39,12 @@
       </div>
       <input name="seller" placeholder="Seller" list="sellers">
       <datalist id="sellers"></datalist>
-      <div class="row bs-date">
+      <div class="row date-quick">
+        <button type="button" data-day="today">Today</button>
+        <button type="button" data-day="yesterday">Yesterday</button>
+        <button type="button" data-day="custom">Custom</button>
+      </div>
+      <div class="row bs-date" id="customDate" hidden>
         <select id="bsYear" aria-label="Year"></select>
         <select id="bsMonth" aria-label="Month"></select>
         <select id="bsDay" aria-label="Day"></select>
